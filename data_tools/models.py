@@ -1,4 +1,5 @@
 import numpy as np
+from preprocessing import prepare_data
 from typing import Optional, Any
 from catboost import CatBoostRegressor, CatBoostClassifier
 from sklearn.compose import ColumnTransformer
@@ -6,7 +7,6 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import f1_score, make_scorer
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
-from preprocessing import prepare_data
 
 X, y, cats = prepare_data('../data/task1')
 

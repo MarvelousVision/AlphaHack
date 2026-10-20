@@ -2,7 +2,7 @@ import numpy as np
 import polars as pl
 from pathlib import Path
 from itertools import combinations_with_replacement
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.stattools import jarque_bera
 
 def prepare_data(
