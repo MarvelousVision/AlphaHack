@@ -10,7 +10,7 @@ def prepare_data(
     file: str = "train.csv",
     types_file: str = "data_dictionary.csv",
     alpha: float | int = 0.05
-) -> tuple[pl.DataFrame | pl.LazyFrame, list[str]]:
+) -> tuple[pl.DataFrame, pl.DataFrame | None, list[str]]:
     '''
     Принимает на вход путь к директории с данными, (на всякий случай) названия файлов с ними и
     ещё пороговое p-значение для теста Харке-Бера
@@ -30,13 +30,15 @@ def prepare_data(
     directory = Path(directory)
 
     types = pl.read_csv(directory / types_file)
+    y = types.filter(pl.col("description_ru").str.contains("целевая переменная"))
     columns = types["feature"].to_list()
     if 'id' in columns:
         has_id = True
         columns.remove('id')
     else:
         has_id = False
-    types = types["dtype"].to_list()
+    columns.remove(y['feature'][0])
+    types = [t for t in types["dtype"].to_list() if type not in ('id', y['feature'][0])]
 
     numeric = [c for c, t in zip(columns, types) if t == "numeric"]
     binary = [c for c, t in zip(columns, types) if t == "binary"]
@@ -50,6 +52,11 @@ def prepare_data(
     )
     if has_id:
         id = data.select('id')
+    if file.startswith('train'):
+        data = data.drop_nulls(subset=[y['feature'][0]])
+        y_col = data.select(y["feature"][0])
+    else:
+        y_col = None
     data = data.select(columns)
 
     for c in numeric:
@@ -165,4 +172,4 @@ def prepare_data(
     )
     if has_id:
         blocks.append(id)
-    return pl.concat(blocks, how="horizontal"), cats
+    return pl.concat(blocks, how="horizontal"), y_col, cats
