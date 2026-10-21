@@ -184,7 +184,6 @@ async def run_solution(task_dir, output_path):
 
 
 if __name__ == "__main__":
-    import sys
     import asyncio
 
     task_path = Path(sys.argv[1]).resolve()

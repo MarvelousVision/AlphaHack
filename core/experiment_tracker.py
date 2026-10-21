@@ -69,7 +69,6 @@ class ExperimentTracker:
                 "metric_name": metric.name if metric is not None else None,
                 "error": result.error,
                 "hypothesis": plan.hypothesis,
-                "preprocessing": plan.preprocessing.model_dump(mode="json"),
                 "cv_std": getattr(result, "cv_std", None), 
             })
         return summary
