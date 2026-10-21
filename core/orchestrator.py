@@ -48,18 +48,25 @@ class Orchestrator:
                 break
 
             history = self.tracker.get_summary_for_agent()
-
+            
             try:
                 raw_plan = await self.agent.propose(history)
                 plan = ExperimentPlan.model_validate(raw_plan)
-
             except Exception as e:
                 print(
                     f"[iteration {iteration + 1}] "
                     f"Agent error: {type(e).__name__}: {e}"
                 )
                 break
-
+            already_tested = any(
+                    entry["plan"].model == plan.model
+                    and entry["plan"].preprocessing == plan.preprocessing
+                    and entry["plan"].features == plan.features
+                    for entry in self.tracker.get_history()
+                )
+            if already_tested:
+                print(f"[iteration {iteration + 1}] Duplicate experiment skipped")
+                continue            
             elapsed = time.perf_counter() - start
             research_time = budget - elapsed - self.final_reserve_sec
 
