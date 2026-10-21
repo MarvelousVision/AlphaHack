@@ -44,7 +44,6 @@ SYSTEM_PROMPT_TEMPLATE = """
     "name": "cbr | cbc | lnr",
     "hyperparameters": {{ "param1": value1 }}
   }},
-  "preprocessing": {{ "missing_values": "native", "categorical_encoding": "native", "scaling": "none" }},
   "features": {{ "strategy": "baseline", "drop_columns": [] }},
   "reasoning": "почему это улучшит метрику",
   "estimated_time_sec": 300

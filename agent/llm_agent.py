@@ -60,11 +60,6 @@ class AutoResearchAgent:
                     "name": fallback_model, 
                     "hyperparameters": {"iterations": 100}
                 },
-                "preprocessing": {
-                    "missing_values": "native", 
-                    "categorical_encoding": "native", 
-                    "scaling": "none"
-                },
                 "features": {
                     "strategy": "baseline", 
                     "drop_columns": []
