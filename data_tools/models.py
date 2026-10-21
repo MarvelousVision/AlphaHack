@@ -11,7 +11,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 from solution import X_train, y, X_test, cat, numeric, task, ids, tgt, id_name, METRIC, WAY_TO_JSON
 
-MODELS = {'lnr': LinearRegression}
+MODELS = {'lnr': {'model': LinearRegression,
+                  'task': 'regression'}}
 
 def encode(what = None) -> Any:
     if what is None: return LabelEncoder().fit_transform(y)
@@ -33,6 +34,10 @@ def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = N
         x = X_train
         cats = cat
         numerics = numeric
+    elif isinstance(to_drop, str):
+        x = X_train.drop(to_drop, axis=1)
+        cats = [c for c in cat if c != to_drop]
+        numerics = [n for n in numeric if n != to_drop]
     else:
         x = X_train.drop(columns=to_drop)
         cats = [c for c in cat if c not in to_drop]
@@ -55,7 +60,14 @@ def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = N
     if model in ['cbr', 'cbc']:
         optimus = 'passthrough'
 
-        estimator = CatBoostRegressor(cat_features=cats, **kwargs) if model == 'cbr' else CatBoostClassifier(cat_features=cats, **kwargs)
+        if model == 'cbr':
+            if task != 'regression':
+                raise ValueError('Функция отсутствует или не соответствует задаче!')
+            estimator = CatBoostRegressor(cat_features=cats, **kwargs)
+        else:
+            if task == 'regression':
+                raise ValueError('Функция отсутствует или не соответствует задаче!')
+            estimator = CatBoostClassifier(cat_features=cats, **kwargs)
 
     else:
         optimus = ColumnTransformer(
@@ -66,24 +78,12 @@ def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = N
             remainder='passthrough'
         )
 
-        estimator = MODELS.get(model, None)
+        estimator = MODELS.get(model, {})
 
-        if estimator is None:
-            previos[cnt] = {
-                'model': None,
-                'args': None,
-                'to_drop': None,
-                'metric_name': None,
-                'mean_score': None,
-                'max_score': None,
-                'min_score': None,
-                'score_std': None
-            }
-            with open(WAY_TO_JSON, 'w') as f:
-                json.dump(previos, f)
-            return previos
+        if estimator == {} or task not in estimator.get('task', ''):
+            raise ValueError('Функция отсутствует или не соответствует задаче!')
 
-        estimator = estimator(**kwargs)
+        estimator = estimator['model'](**kwargs)
 
     pipe = Pipeline(
         steps = [
@@ -125,6 +125,10 @@ def the_end(num: int = 1) -> pd.DataFrame:
         train, test = X_train, X_test
         cats = cat
         numerics = numeric
+    elif isinstance(to_drop, str):
+        train, test = X_train.drop(to_drop, axis=1), X_test.drop(to_drop, axis=1)
+        cats = [c for c in cat if c != to_drop]
+        numerics = [n for n in numeric if n != to_drop]
     else:
         train, test = X_train.drop(columns=to_drop), X_test.drop(columns=to_drop)
         cats = [c for c in cat if c not in to_drop]
@@ -168,6 +172,3 @@ def the_end(num: int = 1) -> pd.DataFrame:
     res[tgt] = pipe.predict(test) if task == 'regression' else encoder.inverse_transform(pipe.predict(test))
 
     return res
-
-print(unimodel(model='cbc', to_drop=['spkts', 'dpkts'], iterations=1))
-print(the_end().head())
