@@ -19,9 +19,9 @@ def prepare_data(
 
     Делит признаки на числовые, бинарные и категориальные (других вроде нет)
 
-    Категориальные признаки заполняет модой и One-Hot энкодит
+    Категориальные признаки заполняет модой
 
-    Бинарные признаки заполняет модой в зависимости от категориальных и тоже One-Hot энкодит
+    Бинарные признаки заполняет модой в зависимости от категориальных
 
     Числовые признаки заполняет средним в зависимости от категориальных и бинарных признаков;
     проверяет тестом Харке-Бера и логарифмирует, если они рапределены ненормально;
@@ -32,17 +32,19 @@ def prepare_data(
     directory = Path(directory)
 
     types = pl.read_csv(directory / types_file)
-    y = types.filter(pl.col("description_ru").str.contains("целевая переменная"))
+    y = types.filter(pl.col("role").str.contains("target"))
     tgt = y['feature'][0]
+    id_row = types.filter(pl.col("role").str.contains("id"))
+    id_name = id_row['feature'][0]
     if y['dtype'][0] == 'numeric':
         task = 'regression'
     elif y['dtype'][0] == 'binary':
         task = 'binary'
     else:
-        task = 'multyclass'
+        task = 'multiclass'
     columns = types["feature"].to_list()
-    types = [t for c, t in zip(columns, types["dtype"].to_list()) if c not in ('id', tgt)]
-    columns.remove('id')
+    types = [t for c, t in zip(columns, types["dtype"].to_list()) if c not in (id_name, tgt)]
+    columns.remove(id_name)
     columns.remove(tgt)
 
     numeric = [c for c, t in zip(columns, types) if t == "numeric"]
@@ -59,7 +61,7 @@ def prepare_data(
         infer_schema=False,
         null_values=["", "NA", "NaN", "nan", "NULL", "null"]
     )
-    ids = test_data.select('id')
+    ids = test_data.select(id_name)
     train_data = train_data.drop_nulls(subset=[tgt])
     y_col = train_data.select(tgt)
     train_data = train_data.select(columns)
@@ -86,7 +88,8 @@ def prepare_data(
 
     for c in category:
         observed = train_data[c].drop_nulls()
-        fill = observed.mode().sort()[0]
+        modes = observed.mode().sort()
+        fill = modes[0] if len(modes) else '__MISSING__'
         train_data = train_data.with_columns(pl.col(c).fill_null(fill))
         test_data = test_data.with_columns(pl.col(c).fill_null(fill))
 
@@ -99,9 +102,12 @@ def prepare_data(
 
             if use_mean:
                 fallback = observed.mean()
+                if fallback is None or not np.isfinite(fallback):
+                    fallback = 0.0
                 aggregate = pl.col(c).mean()
             else:
-                fallback = observed.mode().sort()[0]
+                modes = observed.mode().sort()
+                fallback = modes[0] if len(modes) else '__MISSING__'
                 aggregate = pl.col(c).mode().sort().first()
 
             if groups:
@@ -194,11 +200,6 @@ def prepare_data(
         x_train = np.column_stack(train_features)
         x_test = np.column_stack(test_features)
 
-        scaler = StandardScaler()
-        scaler.fit(x_train)
-        x_train = scaler.transform(x_train)
-        x_test = scaler.transform(x_test)
-
         train_blocks.append(pl.DataFrame(x_train, schema=numeric, orient="row"))
         test_blocks.append(pl.DataFrame(x_test, schema=numeric, orient="row"))
 
@@ -224,8 +225,10 @@ def prepare_data(
         pl.concat(train_blocks, how="horizontal"),
         y_col,
         pl.concat(test_blocks, how="horizontal"),
+        numeric,
         cat,
         task,
         ids,
-        tgt
+        tgt,
+        id_name
     )
