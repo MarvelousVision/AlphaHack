@@ -31,13 +31,16 @@ class Orchestrator:
         self.final_reserve_sec = final_reserve_sec
         self.history_path = Path(history_path)
 
-    def run(self, metric_name: str):
+
+
+    async def run(self, metric_name: str,time_budget_sec: float | None = None):
+        budget = time_budget_sec if time_budget_sec is not None else self.time_budget_sec
         start = time.perf_counter()
 
         for iteration in range(self.max_experiments):
             elapsed = time.perf_counter() - start
 
-            remaining = self.time_budget_sec - elapsed
+            remaining = budget - (time.perf_counter() - start)
             research_time = remaining - self.final_reserve_sec
 
             if research_time <= 0:
@@ -47,7 +50,7 @@ class Orchestrator:
             history = self.tracker.get_summary_for_agent()
 
             try:
-                raw_plan = self.agent.propose(history)
+                raw_plan = await self.agent.propose(history)
                 plan = ExperimentPlan.model_validate(raw_plan)
 
             except Exception as e:

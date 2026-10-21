@@ -5,13 +5,8 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class ModelConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    name: Literal[
-        "catboost",
-        "lightgbm",
-        "xgboost",
-        "linear_regression",
-        "logistic_regression"
-    ]
+
+    name: Literal["cbr", "cbc", "lnr"]
     hyperparameters: dict[str, Any] = Field(default_factory=dict)
 
 class PreprocessingConfig(BaseModel):

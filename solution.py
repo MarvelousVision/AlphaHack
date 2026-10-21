@@ -2,6 +2,7 @@
 import os
 import tempfile
 from pathlib import Path
+import time 
 
 import numpy as np
 import pandas as pd
@@ -40,8 +41,6 @@ def save_submission(
 
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write a complete temporary file first.
     tmp_path = None
 
     try:
@@ -56,19 +55,14 @@ def save_submission(
         ) as tmp:
             tmp_path = Path(tmp.name)
             submission.to_csv(tmp, index=False)
-
-        # Replace old submission only after successful writing.
         os.replace(tmp_path, output)
-
     finally:
         if tmp_path is not None:
             tmp_path.unlink(missing_ok=True)
 
     return output
 
-
-# 3. Управление ML pipeline
-def run_ml_pipeline(
+async def run_ml_pipeline(
     prepared_data,
     orchestrator,
     baseline_plan,
@@ -76,8 +70,8 @@ def run_ml_pipeline(
     sample_submission_path,
     output_path,
     metric_name,
-):
-    # 1. Create baseline submission
+): 
+    pipeline_start = time.perf_counter()
     print("Training baseline model...")
     baseline_predictions = train_and_predict(
         baseline_plan,
@@ -90,17 +84,31 @@ def run_ml_pipeline(
         output_path=output_path,
         target_name=prepared_data["target_name"],
     )
-
     print("Baseline submission saved.")
+    TOTAL_BUDGET = 10800
+    remaining_budget = max(
+        0.0,
+        TOTAL_BUDGET - (time.perf_counter() - pipeline_start)
+    )
 
-    # 2. Run AutoResearch
     print("Starting AutoResearch...")
-    research_output = orchestrator.run(metric_name)
-
+    try:
+        research_output = await orchestrator.run(
+        metric_name,
+        time_budget_sec=remaining_budget,
+         )
+    except Exception as e:
+        print(f"AutoResearch failed: {type(e).__name__}: {e}")
+        return {
+            "best_plan": None,
+            "best_result": None,
+        }
+        
     best_plan = research_output["best_plan"]
-
-    # 3. If AutoResearch found a successful experiment
-    if best_plan is not None:
+    remaining_total = TOTAL_BUDGET - (
+    time.perf_counter() - pipeline_start
+    )
+    if best_plan is not None and remaining_total > 60:
         print(f"Best plan found: {best_plan.model.name}. Training on full data...")
         try:
             final_predictions = train_and_predict(
@@ -128,26 +136,5 @@ def run_ml_pipeline(
     return research_output
 
 
-# 4. Entry point организаторов
-# Сюда позже подключим настоящий запуск
-# согласно baseline.py
 if __name__ == "__main__":
     print("Pipeline is ready. Waiting for the organizer's baseline.py integration.")
-    
-    # Пример того, как это будет выглядеть (псевдокод):
-    # 1. prepared_data = load_data(...)
-    # 2. executor = YarikMLEngine(...)
-    # 3. runner = ExperimentRunner(executor)
-    # 4. tracker = ExperimentTracker()
-    # 5. agent = QwenAgent(...)
-    # 6. orchestrator = Orchestrator(agent, runner, tracker)
-    # 
-    # run_ml_pipeline(
-    #     prepared_data=prepared_data,
-    #     orchestrator=orchestrator,
-    #     baseline_plan=...,
-    #     train_and_predict=...,
-    #     sample_submission_path="data/sample_submission.csv",
-    #     output_path="submissions/final.csv",
-    #     metric_name="f1_macro",
-    # )
