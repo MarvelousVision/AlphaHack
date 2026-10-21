@@ -41,9 +41,9 @@ def prepare_data(
     else:
         task = 'multyclass'
     columns = types["feature"].to_list()
+    types = [t for c, t in zip(columns, types["dtype"].to_list()) if c not in ('id', tgt)]
     columns.remove('id')
     columns.remove(tgt)
-    types = [t for t in types["dtype"].to_list() if type not in ('id', tgt)]
 
     numeric = [c for c, t in zip(columns, types) if t == "numeric"]
     binary = [c for c, t in zip(columns, types) if t == "binary"]
@@ -52,14 +52,12 @@ def prepare_data(
     train_data = pl.read_csv(
         directory / train_file,
         infer_schema=False,
-        null_values=["", "NA", "NaN", "nan", "NULL", "null"],
-        row_index_name = 'id'
+        null_values=["", "NA", "NaN", "nan", "NULL", "null"]
     )
     test_data = pl.read_csv(
         directory / test_file,
         infer_schema=False,
-        null_values=["", "NA", "NaN", "nan", "NULL", "null"],
-        row_index_name='id'
+        null_values=["", "NA", "NaN", "nan", "NULL", "null"]
     )
     ids = test_data.select('id')
     train_data = train_data.drop_nulls(subset=[tgt])
