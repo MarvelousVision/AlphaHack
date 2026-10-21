@@ -14,7 +14,7 @@ class AutoResearchAgent:
     best_result: dict | None,
     task_info: dict,
     remaining_time_sec: float,
-) -> dict:
+    ) -> dict:
             
         recent_history = history[-5:] if len(history) > 5 else history
         history_str = json.dumps(recent_history, indent=2, ensure_ascii=False)
@@ -45,18 +45,38 @@ class AutoResearchAgent:
         except Exception as e:
             print(f"[Agent Warning] LLM or API Error: {e}. Using fallback.")
             
-            is_classification = task_info.get("task_type", "").lower() == "classification"
+            is_classification = task_info.get("task_type", "").lower() in (
+            "binary",
+            "multiclass",
+            "classification",
+            )
+
             fallback_model = "cbc" if is_classification else "cbr"
-            
-            return {
+
+            fallback_dict = {
                 "action": "run_experiment",
                 "hypothesis": f"Fallback baseline due to error: {str(e)[:50]}",
                 "model": {
                     "name": fallback_model, 
                     "hyperparameters": {"iterations": 100}
                 },
-                "preprocessing": {"missing_values": "native", "categorical_encoding": "native", "scaling": "none"},
-                "features": {"strategy": "baseline", "drop_columns": []},
+                "preprocessing": {
+                    "missing_values": "native", 
+                    "categorical_encoding": "native", 
+                    "scaling": "none"
+                },
+                "features": {
+                    "strategy": "baseline", 
+                    "drop_columns": []
+                },
                 "reasoning": "Fallback triggered to ensure pipeline doesn't crash.",
                 "estimated_time_sec": 300
             }
+
+            try:
+                validated_fallback = ExperimentPlan(**fallback_dict)
+                return validated_fallback.model_dump()
+            
+            except Exception as validation_error:
+                print(f"[Agent CRITICAL] Fallback validation failed: {validation_error}")
+                return fallback_dict
