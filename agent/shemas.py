@@ -13,12 +13,3 @@ class PreprocessingConfig(BaseModel):
 class FeaturesConfig(BaseModel):
     strategy: str = "baseline"
     drop_columns: List[str] = Field(default_factory=list)
-
-class AgentAction(BaseModel):
-    action: str = "run_experiment"
-    hypothesis: str
-    model: ModelConfig
-    preprocessing: PreprocessingConfig
-    features: FeaturesConfig
-    reasoning: str
-    estimated_time_sec: int
