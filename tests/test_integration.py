@@ -1,110 +1,198 @@
-from core.schemas import ExperimentPlan
+import asyncio
+import tempfile
+from pathlib import Path
 
 from core.experiment_runner import ExperimentRunner
 from core.experiment_tracker import ExperimentTracker
+from core.orchestrator import Orchestrator
+from core.schemas import ExperimentPlan
+
+import numpy as np
+import pandas as pd
+
+from solution import run_ml_pipeline
 
 
+class MockAgent:
+    async def propose(self, history):
+        return {
+            "action": "run_experiment",
+            "hypothesis": "Test CatBoost model",
+            "model": {
+                "name": "cbr",
+                "hyperparameters": {},
+            },
+            "preprocessing": {
+                "missing_values": "native",
+                "categorical_encoding": "native",
+                "scaling": "none",
+            },
+            "features": {
+                "strategy": "baseline",
+                "drop_columns": [],
+            },
+            "reasoning": "Integration test",
+            "estimated_time_sec": 10,
+        }
 
-# 1. Mock функции Ярика
-def mock_unimodel(plan):
-    scores = {
-        "catboost": 0.76,
-        "lightgbm": 0.81,
-        "xgboost": 0.78,
-    }
 
+def mock_ml_engine(plan):
     return {
-        "score": scores[plan.model.name],
-        "metric_name": "f1_macro",
-        "model_path": f"artifacts/{plan.model.name}.joblib",
+        "score": 0.75,
+        "metric_name": "rmse",
+        "cv_std": 0.02,
     }
+async def test_full_pipeline():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp = Path(temp_dir)
 
+        sample_path = temp / "sample_submission.csv"
+        output_path = temp / "submission.csv"
 
-# 2. Функция создания ExperimentPlan
-def make_plan(model_name):
-    return ExperimentPlan(
-        action="run_experiment",
-        hypothesis=f"Test {model_name}",
-        model={
-            "name": model_name,
-            "hyperparameters": {},
-        },
-        preprocessing={
-            "missing_values": "native",
-            "categorical_encoding": "native",
-            "scaling": "none",
-        },
-        features={
-            "strategy": "baseline",
-            "drop_columns": [],
-        },
-        reasoning="Compare model performance",
-        estimated_time_sec=300,
+        pd.DataFrame({
+            "id": [1, 2, 3],
+            "target": [0.0, 0.0, 0.0],
+        }).to_csv(sample_path, index=False)
+
+        prepared_data = {"target_name": "target"}
+
+        calls = []
+
+        def mock_train_and_predict(plan, data):
+            calls.append(plan.model.name)
+
+            if len(calls) == 1:
+                return np.array([0.1, 0.2, 0.3])
+
+            return np.array([0.4, 0.5, 0.6])
+
+        tracker = ExperimentTracker()
+        runner = ExperimentRunner(executor=mock_ml_engine)
+
+        orchestrator = Orchestrator(
+            agent=MockAgent(),
+            runner=runner,
+            tracker=tracker,
+            max_experiments=2,
+            time_budget_sec=120,
+            final_reserve_sec=20,
+            history_path=str(temp / "history.jsonl"),
+        )
+
+        baseline_plan = ExperimentPlan.model_validate(
+        await MockAgent().propose([])
     )
 
+        result = await run_ml_pipeline(
+            prepared_data=prepared_data,
+            orchestrator=orchestrator,
+            baseline_plan=baseline_plan,
+            train_and_predict=mock_train_and_predict,
+            sample_submission_path=str(sample_path),
+            output_path=str(output_path),
+            metric_name="rmse",
+        )
 
-# 3. Создаём три плана
-plan_catboost = make_plan("catboost")
-plan_lightgbm = make_plan("lightgbm")
-plan_xgboost = make_plan("xgboost")
+        assert output_path.exists()
+
+        submission = pd.read_csv(output_path)
+
+        assert np.allclose(
+            submission["target"].to_numpy(),
+            [0.4, 0.5, 0.6],
+        )
+
+        assert len(calls) == 2
+        assert result["best_plan"] is not None
+
+        print("Full pipeline test PASSED!")
+
+async def test_final_training_failure():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp = Path(temp_dir)
+
+        sample_path = temp / "sample_submission.csv"
+        output_path = temp / "submission.csv"
+
+        pd.DataFrame({
+            "id": [1, 2, 3],
+            "target": [0.0, 0.0, 0.0],
+        }).to_csv(sample_path, index=False)
+
+        calls = 0
+
+        def failing_train_and_predict(plan, data):
+            nonlocal calls
+            calls += 1
+
+            if calls == 1:
+                return np.array([0.1, 0.2, 0.3])
+
+            raise RuntimeError("Simulated final training failure")
+
+        tracker = ExperimentTracker()
+        runner = ExperimentRunner(executor=mock_ml_engine)
+
+        orchestrator = Orchestrator(
+            agent=MockAgent(),
+            runner=runner,
+            tracker=tracker,
+            max_experiments=1,
+            time_budget_sec=120,
+            final_reserve_sec=20,
+            history_path=str(temp / "history.jsonl"),
+        )
+
+        baseline_plan = ExperimentPlan.model_validate(
+            await MockAgent().propose([])
+        )
+
+        await run_ml_pipeline(
+            prepared_data={"target_name": "target"},
+            orchestrator=orchestrator,
+            baseline_plan=baseline_plan,
+            train_and_predict=failing_train_and_predict,
+            sample_submission_path=str(sample_path),
+            output_path=str(output_path),
+            metric_name="rmse",
+        )
+
+        submission = pd.read_csv(output_path)
+
+        assert calls == 2
+        assert np.allclose(
+            submission["target"].to_numpy(),
+            [0.1, 0.2, 0.3],
+        )
+
+        print("Fallback test PASSED!")
+async def main():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tracker = ExperimentTracker()
+        runner = ExperimentRunner(executor=mock_ml_engine)
+
+        orchestrator = Orchestrator(
+            agent=MockAgent(),
+            runner=runner,
+            tracker=tracker,
+            max_experiments=2,
+            time_budget_sec=120,
+            final_reserve_sec=20,
+            history_path=str(Path(temp_dir) / "history.jsonl"),
+        )
+
+        result = await orchestrator.run("rmse")
+
+        assert result["best_plan"] is not None
+        assert result["best_plan"].model.name == "cbr"
+        assert len(tracker.get_history()) == 2
+        assert (Path(temp_dir) / "history.jsonl").exists()
+
+        print("Integration test PASSED!")
+    await test_full_pipeline()
+    await test_final_training_failure()
 
 
-# 4. Создаём Runner и Tracker
-runner = ExperimentRunner(executor=mock_unimodel)
-tracker = ExperimentTracker()
-
-
-# 5. Запускаем три эксперимента
-for plan in [plan_catboost, plan_lightgbm, plan_xgboost]:
-    result = runner.run(plan)
-    tracker.add_experiment(plan, result)
-
-    print(
-        f"Model: {result.model_name}, "
-        f"Status: {result.status}, "
-        f"Score: {result.metric.value if result.metric else None}"
-    )
-
-
-# 6. Выбираем лучший эксперимент
-best = tracker.get_best("f1_macro")
-
-print("\nBest model:", best.model_name)
-print("Best score:", best.metric.value)
-print("Total experiments:", len(tracker.get_history()))
-
-
-# 7. Проверяем результат
-assert best.model_name == "lightgbm"
-assert best.metric.value == 0.81
-assert len(tracker.get_history()) == 3
-
-print("\nIntegration test PASSED!")
-from pathlib import Path
-import json
-
-history_path = Path("artifacts/experiments.jsonl")
-
-tracker.save_history(history_path)
-
-assert history_path.exists()
-
-with history_path.open("r", encoding="utf-8") as f:
-    records = [json.loads(line) for line in f]
-
-assert len(records) == 3
-assert records[1]["plan"]["model"]["name"] == "lightgbm"
-assert records[1]["result"]["metric"]["value"] == 0.81
-
-print("JSONL test PASSED!")
-
-summary = tracker.get_summary_for_agent()
-
-assert len(summary) == 3
-assert summary[0]["model"] == "catboost"
-assert summary[1]["model"] == "lightgbm"
-assert summary[1]["score"] == 0.81
-assert summary[2]["model"] == "xgboost"
-
-print("Agent summary test PASSED!")
-print(summary)
+if __name__ == "__main__":
+    asyncio.run(main())
+    
