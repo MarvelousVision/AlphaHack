@@ -40,8 +40,8 @@ class Orchestrator:
         for iteration in range(self.max_experiments):
             elapsed = time.perf_counter() - start
 
-            remaining = budget - (time.perf_counter() - start)
-            research_time = remaining - self.final_reserve_sec
+            remaining = budget - elapsed
+            research_time = remaining - self.final_reserve_sec  
 
             if research_time <= 0:
                 print("Research budget exhausted")
@@ -61,11 +61,7 @@ class Orchestrator:
                 break
 
             elapsed = time.perf_counter() - start
-            research_time = (
-                self.time_budget_sec
-                - elapsed
-                - self.final_reserve_sec
-            )
+            research_time = budget - elapsed - self.final_reserve_sec
 
             if plan.estimated_time_sec > research_time:
                 print("Not enough time for another experiment")
@@ -94,7 +90,6 @@ class Orchestrator:
             "best_plan": self.tracker.get_best_plan(metric_name),
             "remaining_time_sec": max(
                 0.0,
-                self.time_budget_sec
-                - (time.perf_counter() - start),
+                budget - (time.perf_counter() - start),
             ),
         }
