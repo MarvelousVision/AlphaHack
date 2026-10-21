@@ -11,6 +11,7 @@ class Orchestrator:
         agent,
         runner,
         tracker,
+        task_info,
         max_experiments=10,
         time_budget_sec=10800,
         final_reserve_sec=1800,
@@ -25,6 +26,7 @@ class Orchestrator:
         self.agent = agent
         self.runner = runner
         self.tracker = tracker
+        self.task_info = task_info
 
         self.max_experiments = max_experiments
         self.time_budget_sec = time_budget_sec
@@ -48,9 +50,20 @@ class Orchestrator:
                 break
 
             history = self.tracker.get_summary_for_agent()
-            
+            best = self.tracker.get_best(metric_name)
+
+            best_result = (
+                best.model_dump(mode="json")
+                if best is not None
+                else None
+            )
             try:
-                raw_plan = await self.agent.propose(history)
+                raw_plan = await self.agent.propose(
+                    history=history,
+                    best_result=best_result,
+                    task_info=self.task_info,
+                    remaining_time_sec=research_time,
+                )
                 plan = ExperimentPlan.model_validate(raw_plan)
             except Exception as e:
                 print(
@@ -59,11 +72,10 @@ class Orchestrator:
                 )
                 break
             already_tested = any(
-                    entry["plan"].model == plan.model
-                    and entry["plan"].preprocessing == plan.preprocessing
-                    and entry["plan"].features == plan.features
-                    for entry in self.tracker.get_history()
-                )
+                entry["plan"].model == plan.model
+                and entry["plan"].features == plan.features
+                for entry in self.tracker.get_history()
+            )
             if already_tested:
                 print(f"[iteration {iteration + 1}] Duplicate experiment skipped")
                 continue            

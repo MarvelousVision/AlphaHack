@@ -31,7 +31,6 @@ class ExperimentPlan(BaseModel):
     hypothesis: str = Field(min_length=1)
 
     model: ModelConfig
-    preprocessing: PreprocessingConfig
     features: FeatureConfig
 
     reasoning: str = Field(min_length=1)
