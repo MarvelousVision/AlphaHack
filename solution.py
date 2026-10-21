@@ -18,8 +18,8 @@ from core.orchestrator import Orchestrator
 from data_tools.preprocessing import prepare_data
 
 
-TOTAL_BUDGET =  10800
-FINAL_RESERVE =  1800
+TOTAL_BUDGET = 10800
+FINAL_RESERVE = 1800
 
 
 def save_submission(predictions, sample_submission_path, output_path, target_name):
@@ -113,14 +113,20 @@ async def run_solution(task_dir, output_path):
     experiment_numbers = {}
 
     def key(plan):
-        return plan.model_dump_json(include={"model", "preprocessing", "features"})
+        return plan.model_dump_json(include={"model", "features"})
 
     def execute_experiment(plan):
         before = set(json.loads(engine_history.read_text(encoding="utf-8")))
+
+        params = plan.model.hyperparameters.copy()
+
+        if plan.model.name in ("cbr", "cbc"):
+            params["verbose"] = False
+
         history = unimodel(
             model=plan.model.name,
             to_drop=plan.features.drop_columns or None,
-            **plan.model.hyperparameters,
+            **params,
         )
         new_keys = [k for k in history if str(k) not in before]
         if len(new_keys) != 1:
@@ -167,7 +173,7 @@ async def run_solution(task_dir, output_path):
         agent = AutoResearchAgent(client=client, model_name=os.environ["OPENAI_MODEL"])
         orchestrator = Orchestrator(
             agent=agent, runner=runner, tracker=tracker, task_info=task_info,
-            max_experiments=100, time_budget_sec=TOTAL_BUDGET,
+            max_experiments=300, time_budget_sec=TOTAL_BUDGET,
             final_reserve_sec=FINAL_RESERVE,
             history_path="artifacts/history.jsonl",
         )
