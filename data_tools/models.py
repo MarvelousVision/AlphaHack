@@ -159,7 +159,7 @@ def the_end(num: int = 1) -> pd.DataFrame:
         if estimator is None:
             return pd.DataFrame()
 
-        estimator = estimator(**info['args'])
+        estimator = estimator['model'](**info['args'])
 
     pipe = Pipeline(
         steps=[
