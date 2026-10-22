@@ -203,5 +203,3 @@ def the_end(num: int = 1) -> pd.DataFrame:
     res[tgt] = pipe.predict(test) if task == 'regression' else encoder.inverse_transform(pipe.predict(test))
 
     return res
-
-print(unimodel('dtc'))
