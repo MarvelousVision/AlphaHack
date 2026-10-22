@@ -102,15 +102,31 @@ async def run_ml_pipeline(
 async def run_solution(task_dir, output_path):
     started_at = time.perf_counter()
     task_dir = Path(task_dir)
-    sample_path = task_dir / "sample_submission.csv"
 
-    X_train, y, X_test, numeric, cat, task, ids, tgt, id_name = prepare_data(str(task_dir))
+    # Определяем путь к данным из task.md
+    data_dir = task_dir / "regression" / "participants"
+
+    # Поддержка локальной структуры
+    if not data_dir.is_dir():
+        data_dir = task_dir
+
+    if not (data_dir / "train.csv").is_file():
+        raise FileNotFoundError(f"Training data not found: {data_dir}")
+
+    sample_path = data_dir / "sample_submission.csv"
+
+    X_train, y, X_test, numeric, cat, task, ids, tgt, id_name = prepare_data(
+        str(data_dir)
+    )
+
     metric_name = "rmse" if task == "regression" else "f1_macro"
     engine_metric = "RMSE" if task == "regression" else "f1_macro"
 
     engine_history = Path("artifacts/experiments.json")
     engine_history.parent.mkdir(parents=True, exist_ok=True)
     engine_history.write_text("{}", encoding="utf-8")
+
+    sys.modules.setdefault("solution", sys.modules[__name__])
 
     sys.modules.setdefault("solution", sys.modules[__name__])
     globals().update({
