@@ -3,7 +3,6 @@ import polars as pl
 from pathlib import Path
 from typing import Any
 from itertools import combinations_with_replacement
-from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.stattools import jarque_bera
 
 def prepare_data(

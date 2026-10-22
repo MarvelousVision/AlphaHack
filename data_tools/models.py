@@ -2,17 +2,48 @@ import json
 import numpy as np
 import pandas as pd
 from typing import Optional, Any
-from catboost import CatBoostRegressor, CatBoostClassifier
+from lightgbm import LGBMRegressor, LGBMClassifier
+from sklearn.svm import SVC, SVR, LinearSVR, LinearSVC
+from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LinearRegression
 from sklearn.metrics import f1_score, make_scorer
 from sklearn.model_selection import cross_val_score
-from sklearn.pipeline import Pipeline
+from catboost import CatBoostRegressor, CatBoostClassifier
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from xgboost import XGBRegressor, XGBClassifier
 from solution import X_train, y, X_test, cat, numeric, task, ids, tgt, id_name, METRIC, WAY_TO_JSON
 
-MODELS = {'lnr': {'model': LinearRegression,
-                  'task': 'regression'}}
+MODELS = {
+    'lnr': {'model': LinearRegression,
+            'task': 'regression'},
+    'dtr': {'model': DecisionTreeRegressor,
+            'task': 'regression'},
+    'dtc': {'model': DecisionTreeClassifier,
+            'task': ['binary', 'multiclass']},
+    'rfr': {'model': RandomForestRegressor,
+            'task': 'regression'},
+    'rfc': {'model': RandomForestClassifier,
+            'task': ['binary', 'multiclass']},
+    'svr': {'model': SVR,
+            'task': 'regression'},
+    'svc': {'model': SVC,
+            'task': ['binary', 'multiclass']},
+    'lvr': {'model': LinearSVR,
+             'task': 'regression'},
+    'lvc': {'model': LinearSVC,
+            'task': ['binary', 'multiclass']},
+    'lbr': {'model': LGBMRegressor,
+            'task': 'regression'},
+    'lbc': {'model': LGBMClassifier,
+            'task': ['binary', 'multiclass']},
+    'xbr': {'model': XGBRegressor,
+            'task': 'regression'},
+    'xbc': {'model': XGBClassifier,
+            'task': ['binary', 'multiclass']}
+}
 
 def encode(what = None) -> Any:
     if what is None: return LabelEncoder().fit_transform(y)
@@ -172,3 +203,5 @@ def the_end(num: int = 1) -> pd.DataFrame:
     res[tgt] = pipe.predict(test) if task == 'regression' else encoder.inverse_transform(pipe.predict(test))
 
     return res
+
+print(unimodel('dtc'))
