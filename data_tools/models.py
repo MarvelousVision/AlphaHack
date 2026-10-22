@@ -12,14 +12,17 @@ from catboost import CatBoostRegressor, CatBoostClassifier
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from xgboost import XGBRegressor, XGBClassifier
 from solution import X_train, y, X_test, cat, numeric, task, ids, tgt, id_name, METRIC, WAY_TO_JSON
 
 MODELS = {
     'lnr': {'model': LinearRegression,
             'task': 'regression'},
-    'lgr': {'model': LogisticRegression,
-            'task': 'binary'},
+    'dtr': {'model': DecisionTreeRegressor,
+            'task': 'regression'},
+    'dtc': {'model': DecisionTreeClassifier,
+            'task': ['binary', 'multiclass']},
     'rfr': {'model': RandomForestRegressor,
             'task': 'regression'},
     'rfc': {'model': RandomForestClassifier,
@@ -200,3 +203,5 @@ def the_end(num: int = 1) -> pd.DataFrame:
     res[tgt] = pipe.predict(test) if task == 'regression' else encoder.inverse_transform(pipe.predict(test))
 
     return res
+
+print(unimodel('dtc'))
