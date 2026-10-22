@@ -70,6 +70,31 @@ class ExperimentTracker:
                 "error": result.error,
                 "hypothesis": plan.hypothesis,
                 "cv_std": getattr(result, "cv_std", None), 
+                "duration_sec": result.duration_sec,
             })
         return summary
-    
+    def get_model_durations(self) -> dict[str, float]:
+        durations = {}
+
+        for entry in self.history:
+            model = entry["plan"].model.name
+            result = entry["result"]
+
+            if result.status != "success":
+                continue
+
+            durations.setdefault(model, []).append(result.duration_sec)
+
+        return {
+            model: sum(values) / len(values)
+            for model, values in durations.items()
+        }
+    def get_max_model_duration(self, model_name: str) -> float | None:
+        durations = [
+            entry["result"].duration_sec
+            for entry in self.history
+            if entry["plan"].model.name == model_name
+            and entry["result"].status == "success"
+        ]
+
+        return max(durations) if durations else None

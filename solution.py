@@ -76,7 +76,10 @@ async def run_ml_pipeline(
 
     best_plan = tracker.get_best_plan(metric_name)
     if best_plan is not None and best_plan != baseline_plan:
-        if TOTAL_BUDGET - (time.perf_counter() - started_at) > 60:
+        remaining_time = TOTAL_BUDGET - (time.perf_counter() - started_at)
+        estimated_final_time = orchestrator.get_final_reserve()
+
+        if remaining_time > estimated_final_time:
             try:
                 predictions = train_and_predict(best_plan)
                 save_submission(predictions, sample_path, output_path, target_name)
@@ -90,13 +93,22 @@ async def run_ml_pipeline(
 async def run_solution(task_dir, output_path):
     started_at = time.perf_counter()
     task_dir = Path(task_dir)
+    import re
+    task_file = task_dir / "task.md"
+    task_text = task_file.read_text(encoding="utf-8")
 
-    # Определяем путь к данным из task.md
-    data_dir = task_dir / "regression" / "participants"
+    match = re.search(
+        r"([\w./-]+/train\.csv)",
+        task_text
+    )
 
-    # Поддержка локальной структуры
-    if not data_dir.is_dir():
+    if match:
+        data_dir = task_dir / Path(match.group(1)).parent
+    else:
         data_dir = task_dir
+
+    if not (data_dir / "train.csv").is_file():
+        raise FileNotFoundError(f"Training data not found: {data_dir}")
 
     if not (data_dir / "train.csv").is_file():
         raise FileNotFoundError(f"Training data not found: {data_dir}")
@@ -113,8 +125,6 @@ async def run_solution(task_dir, output_path):
     engine_history = Path("artifacts/experiments.json")
     engine_history.parent.mkdir(parents=True, exist_ok=True)
     engine_history.write_text("{}", encoding="utf-8")
-
-    sys.modules.setdefault("solution", sys.modules[__name__])
 
     sys.modules.setdefault("solution", sys.modules[__name__])
     globals().update({

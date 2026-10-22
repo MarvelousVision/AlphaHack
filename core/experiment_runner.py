@@ -118,6 +118,7 @@ class ExperimentRunner:
                 value=float(raw["score"]),
                 direction=_direction_for(metric_name),
             ),
+            cv_std=raw.get("cv_std"),
             duration_sec=time.perf_counter() - start,
             error=None,
         )

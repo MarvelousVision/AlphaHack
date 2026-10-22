@@ -33,17 +33,26 @@ class Orchestrator:
         self.final_reserve_sec = final_reserve_sec
         self.history_path = Path(history_path)
 
+    def get_final_reserve(self) -> float:
+        durations = [
+            entry["result"].duration_sec
+            for entry in self.tracker.get_history()
+            if entry["result"].status == "success"
+        ]
 
+        max_duration = max(durations, default=0)
 
+        return max(self.final_reserve_sec, max_duration * 1.2)
+    
     async def run(self, metric_name: str,time_budget_sec: float | None = None):
         budget = time_budget_sec if time_budget_sec is not None else self.time_budget_sec
         start = time.perf_counter()
-
+        consecutive_agent_errors = 0
         for iteration in range(self.max_experiments):
             elapsed = time.perf_counter() - start
 
             remaining = budget - elapsed
-            research_time = remaining - self.final_reserve_sec  
+            research_time = remaining - self.get_final_reserve() 
 
             if research_time <= 0:
                 print("Research budget exhausted")
@@ -65,12 +74,16 @@ class Orchestrator:
                     remaining_time_sec=research_time,
                 )
                 plan = ExperimentPlan.model_validate(raw_plan)
+                consecutive_agent_errors = 0
             except Exception as e:
-                print(
-                    f"[iteration {iteration + 1}] "
-                    f"Agent error: {type(e).__name__}: {e}"
-                )
-                break
+                consecutive_agent_errors += 1
+                print(f"Agent error ({consecutive_agent_errors}/3): {e}")
+
+                if consecutive_agent_errors >= 3:
+                    print("Agent unavailable. Stopping research.")
+                    break
+
+                continue
             already_tested = any(
                 entry["plan"].model == plan.model
                 and entry["plan"].features == plan.features
@@ -80,11 +93,17 @@ class Orchestrator:
                 print(f"[iteration {iteration + 1}] Duplicate experiment skipped")
                 continue            
             elapsed = time.perf_counter() - start
-            research_time = budget - elapsed - self.final_reserve_sec
+            research_time = budget - elapsed - self.get_final_reserve()
 
-            if plan.estimated_time_sec > research_time:
-                print("Not enough time for another experiment")
-                break
+            estimated_duration = self.estimate_duration(plan)
+
+            if estimated_duration > research_time:
+                print(
+                    f"Not enough time for {plan.model.name}: "
+                    f"estimated {estimated_duration:.0f}s, "
+                    f"available {research_time:.0f}s"
+                )
+                continue
 
             result = self.runner.run(plan)
 
