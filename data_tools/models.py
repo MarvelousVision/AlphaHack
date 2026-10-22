@@ -1,55 +1,174 @@
+import json
 import numpy as np
-from preprocessing import prepare_data
+import pandas as pd
 from typing import Optional, Any
 from catboost import CatBoostRegressor, CatBoostClassifier
 from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import f1_score, make_scorer
 from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
+from solution import X_train, y, X_test, cat, numeric, task, ids, tgt, id_name, METRIC, WAY_TO_JSON
 
-X, y, cats = prepare_data('../data/task1')
+MODELS = {'lnr': {'model': LinearRegression,
+                  'task': 'regression'}}
 
-def encode(what: str) -> Any:
-    if what == 'y': return LabelEncoder().fit_transform(y)
-    to_return = ColumnTransformer(
+def encode(what = None) -> Any:
+    if what is None: return LabelEncoder().fit_transform(y)
+    return ColumnTransformer(
         transformers=[
-            ('encoder', OneHotEncoder(), cats)
+            ('encoder', OneHotEncoder(), cat)
         ],
         remainder='passthrough'
-    ).fit_transform(X.to_pandas().drop('id', axis=1))
-    return to_return
+    ).fit_transform(what)
+
 
 def float_y() -> np.ndarray:
     return np.ravel(y.to_numpy().astype(float))
 
+
 def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = None, **kwargs) -> dict:
 
-    if to_drop is not None:
-        global X
-        X = X.drop(to_drop)
-
-    if model == 'lnr':
-        score = np.mean(cross_val_score(LinearRegression(**kwargs),
-                                encode('X'),
-                                float_y(),
-                                scoring='neg_root_mean_squared_error',
-                                n_jobs=-1))
-    elif model == 'cbr':
-        score = np.mean(cross_val_score(CatBoostRegressor(cat_features=cats, **kwargs),
-                                X.to_pandas(),
-                                float_y(),
-                                scoring='neg_root_mean_squared_error',
-                                n_jobs=-1))
-    elif model == 'cbc':
-        score = np.mean(cross_val_score(CatBoostClassifier(cat_features=cats, **kwargs),
-                                X.to_pandas(),
-                                encode('y'),
-                                scoring=make_scorer(f1_score, average='macro'),
-                                n_jobs=-1))
+    if to_drop is None:
+        x = X_train
+        cats = cat
+        numerics = numeric
+    elif isinstance(to_drop, str):
+        x = X_train.drop(to_drop, axis=1)
+        cats = [c for c in cat if c != to_drop]
+        numerics = [n for n in numeric if n != to_drop]
     else:
-        return {'model': None, 'score': -1}
+        x = X_train.drop(columns=to_drop)
+        cats = [c for c in cat if c not in to_drop]
+        numerics = [n for n in numeric if n not in to_drop]
 
-    return {'model': model, 'args': kwargs, 'score': score}
+    with open(WAY_TO_JSON, 'r') as f:
+        previos = json.load(f)
 
-print(unimodel('lnr'))
+    cnt = max(
+        (int(key) for key in previos.keys()),
+        default=0
+    ) + 1
+
+    if task == 'regression':
+        target = float_y()
+    else:
+        encoder = LabelEncoder()
+        target = encoder.fit_transform(y)
+
+    if model in ['cbr', 'cbc']:
+        optimus = 'passthrough'
+
+        if model == 'cbr':
+            if task != 'regression':
+                raise ValueError('Функция отсутствует или не соответствует задаче!')
+            estimator = CatBoostRegressor(cat_features=cats, **kwargs)
+        else:
+            if task == 'regression':
+                raise ValueError('Функция отсутствует или не соответствует задаче!')
+            estimator = CatBoostClassifier(cat_features=cats, **kwargs)
+
+    else:
+        optimus = ColumnTransformer(
+            transformers=[
+                ('encoder', OneHotEncoder(handle_unknown='ignore'), cats),
+                ('scaler', StandardScaler(), numerics)
+            ],
+            remainder='passthrough'
+        )
+
+        estimator = MODELS.get(model, {})
+
+        if estimator == {} or task not in estimator.get('task', ''):
+            raise ValueError('Функция отсутствует или не соответствует задаче!')
+
+        estimator = estimator['model'](**kwargs)
+
+    pipe = Pipeline(
+        steps = [
+            ('preprocessor', optimus),
+            ('estimator', estimator)
+        ]
+    )
+    scoring = 'neg_root_mean_squared_error' if METRIC == 'RMSE' else make_scorer(f1_score, average='macro')
+    score = cross_val_score(pipe, x, target, scoring=scoring)
+
+    if METRIC == 'RMSE': score *= -1
+    previos[cnt] = {
+        'model': model,
+        'args': kwargs,
+        'to_drop': to_drop,
+        'metric_name': METRIC,
+        'mean_score': float(np.mean(score)),
+        'max_score': float(np.max(score)),
+        'min_score': float(np.min(score)),
+        'score_std': float(np.std(score))
+    }
+    with open(WAY_TO_JSON, 'w') as f:
+        json.dump(previos, f)
+    return previos
+
+
+def the_end(num: int = 1) -> pd.DataFrame:
+    res = pd.DataFrame({id_name: ids[id_name]})
+
+    with open(WAY_TO_JSON, 'r') as f:
+        info = json.load(f)[str(num)]
+
+    model = info['model']
+    if model is None:
+        return pd.DataFrame()
+
+    to_drop = info['to_drop']
+    if to_drop is None:
+        train, test = X_train, X_test
+        cats = cat
+        numerics = numeric
+    elif isinstance(to_drop, str):
+        train, test = X_train.drop(to_drop, axis=1), X_test.drop(to_drop, axis=1)
+        cats = [c for c in cat if c != to_drop]
+        numerics = [n for n in numeric if n != to_drop]
+    else:
+        train, test = X_train.drop(columns=to_drop), X_test.drop(columns=to_drop)
+        cats = [c for c in cat if c not in to_drop]
+        numerics = [n for n in numeric if n not in to_drop]
+
+    if task == 'regression':
+        target = float_y()
+    else:
+        encoder = LabelEncoder()
+        target = encoder.fit_transform(y)
+
+    if model in ['cbr', 'cbc']:
+        optimus = 'passthrough'
+
+        estimator = CatBoostRegressor(cat_features=cats, **info['args']) if model == 'cbr' else CatBoostClassifier(cat_features=cats, **info['args'])
+
+    else:
+        optimus = ColumnTransformer(
+            transformers=[
+                ('encoder', OneHotEncoder(handle_unknown='ignore'), cats),
+                ('scaler', StandardScaler(), numerics)
+            ],
+            remainder='passthrough'
+        )
+
+        estimator = MODELS.get(model, None)
+
+        if estimator is None:
+            return pd.DataFrame()
+
+        estimator = estimator['model'](**info['args'])
+
+    pipe = Pipeline(
+        steps=[
+            ('preprocessor', optimus),
+            ('estimator', estimator)
+        ]
+    )
+
+    pipe.fit(train, target)
+    res[tgt] = pipe.predict(test) if task == 'regression' else encoder.inverse_transform(pipe.predict(test))
+
+    return res
