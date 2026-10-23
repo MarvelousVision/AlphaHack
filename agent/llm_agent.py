@@ -29,17 +29,6 @@ class AutoResearchAgent:
         
         bounds = PARAM_RANGES.get(model_name, {})
 
-        # 2. Исключение для CatBoost: его нет в PARAM_RANGES (или он там пуст)
-        # Если Ярик добавит CatBoost в схему, этот блок можно будет удалить.
-        if model_name in ("cbr", "cbc") and not bounds:
-            bounds = {
-                "iterations": (200, 1500),
-                "depth": (4, 8),
-                "learning_rate": (0.03, 0.1),
-                "l2_leaf_reg": (1, 10)
-            }
-
-        # 3. Зажимаем параметры по границам
         for param, value in clamped.items():
             if value is None:
                 continue
@@ -47,10 +36,8 @@ class AutoResearchAgent:
             if param in bounds:
                 min_val, max_val = bounds[param]
                 
-                # Если параметр целочисленный
                 if param in INT_PARAMS or isinstance(value, int):
                     clamped[param] = max(min_val, min(int(value), max_val))
-                # Если вещественный (learning_rate, C, epsilon)
                 elif isinstance(value, float):
                     clamped[param] = round(max(min_val, min(value, max_val)), 4)
                     
