@@ -42,6 +42,16 @@ class AutoResearchAgent:
                     
         return clamped
 
+    def _get_available_params_string(self) -> str:
+        """Генерирует список разрешенных параметров из PARAM_RANGES."""
+        lines = []
+        for model_name, params in PARAM_RANGES.items():
+            if not params:
+                continue
+            param_names = ", ".join(params.keys())
+            lines.append(f"- '{model_name}': {param_names}")
+        return "\n".join(lines)
+
     async def propose(
     self,
     history: list[dict],
@@ -53,13 +63,16 @@ class AutoResearchAgent:
         recent_history = history[-5:] if len(history) > 5 else history
         history_str = json.dumps(recent_history, indent=2, ensure_ascii=False)
         best_str = json.dumps(best_result, indent=2, ensure_ascii=False) if best_result else "Пока нет успешных экспериментов"
+        available_params_str = self._get_available_params_string()
 
+        
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
             task_type=task_info.get("task_type", "unknown"),
             metric_name=task_info.get("metric_name", "unknown"),
             task_description=task_info.get("description", ""),
             n_rows=task_info.get("n_rows", "unknown"),
             remaining_time_sec=remaining_time_sec,
+            available_params=available_params_str,
             best_str=best_str,
             history_str=history_str
         )
@@ -73,6 +86,15 @@ class AutoResearchAgent:
                 temperature=0.7
             )
             raw_json = json.loads(response.choices[0].message.content)
+
+            if isinstance(raw_json, list):
+                if len(raw_json) > 0 and isinstance(raw_json[0], dict):
+                    raw_json = raw_json[0]
+                else:
+                    raise ValueError(f"LLM returned an empty or invalid list: {raw_json}")
+
+            if not isinstance(raw_json, dict):
+                raise ValueError(f"LLM returned an invalid format (expected dict, got {type(raw_json)}): {raw_json}")
             
             validated_action = ExperimentPlan(**raw_json)
             return validated_action.model_dump()
