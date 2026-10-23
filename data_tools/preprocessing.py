@@ -10,7 +10,8 @@ def prepare_data(
         train_file: str = "train.csv",
         test_file: str = "test.csv",
         types_file: str = "data_dictionary.csv",
-        alpha: float | int = 0.05
+        alpha: float | int = 0.05,
+        use_interactions: bool = False               #!!!!!!!!!!!!!!!!!!!!!!!!
 ) -> Any:
     '''
     Принимает на вход путь к директории с данными, (на всякий случай) названия файлов с ними и
@@ -167,33 +168,34 @@ def prepare_data(
 
         train_features = [x_train]
         test_features = [x_test]
+        if use_interactions:
+            pairs = list(combinations_with_replacement(range(len(numeric)), 2))
 
-        pairs = list(combinations_with_replacement(range(len(numeric)), 2))
-        train_interactions = np.column_stack([
-            x_train[:, i] * x_train[:, j] for i, j in pairs
-        ])
-        test_interactions = np.column_stack([
-            x_test[:, i] * x_test[:, j] for i, j in pairs
-        ])
+            train_interactions = np.column_stack([
+                x_train[:, i] * x_train[:, j] for i, j in pairs
+            ])
+            test_interactions = np.column_stack([
+                x_test[:, i] * x_test[:, j] for i, j in pairs
+            ])
 
-        train_interactions = np.clip(
-            np.nan_to_num(
-                train_interactions, nan=0.0, posinf=limit, neginf=-limit
-            ),
-            -limit, limit,
-        )
-        test_interactions = np.clip(
-            np.nan_to_num(
-                test_interactions, nan=0.0, posinf=limit, neginf=-limit
-            ),
-            -limit, limit
-        )
+            train_interactions = np.clip(
+                np.nan_to_num(
+                    train_interactions, nan=0.0, posinf=limit, neginf=-limit
+                ),
+                -limit, limit,
+            )
+            test_interactions = np.clip(
+                np.nan_to_num(
+                    test_interactions, nan=0.0, posinf=limit, neginf=-limit
+                ),
+                -limit, limit
+            )
 
-        train_features.append(train_interactions)
-        test_features.append(test_interactions)
-        numeric.extend(
-            f"interaction__{i}__{j}"
-            for i, j in pairs
+            train_features.append(train_interactions)
+            test_features.append(test_interactions)
+            numeric.extend(
+                f"interaction__{i}__{j}"
+                for i, j in pairs
         )
 
         x_train = np.column_stack(train_features)
