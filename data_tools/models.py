@@ -59,7 +59,7 @@ def float_y() -> np.ndarray:
     return np.ravel(y.to_numpy().astype(float))
 
 
-def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = None, **kwargs) -> dict:
+def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = None, random_seed=42, **kwargs) -> dict:
 
     if to_drop is None:
         x = X_train
@@ -90,15 +90,17 @@ def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = N
 
     if model in ['cbr', 'cbc']:
         optimus = 'passthrough'
+        if 'learning_rate' not in kwargs:
+            kwargs['learning_rate'] = 0.05
 
         if model == 'cbr':
             if task != 'regression':
                 raise ValueError('Функция отсутствует или не соответствует задаче!')
-            estimator = CatBoostRegressor(cat_features=cats, **kwargs)
+            estimator = CatBoostRegressor(cat_features=cats, random_seed=random_seed, **kwargs)
         else:
             if task == 'regression':
                 raise ValueError('Функция отсутствует или не соответствует задаче!')
-            estimator = CatBoostClassifier(cat_features=cats, **kwargs)
+            estimator = CatBoostClassifier(cat_features=cats, random_seed=random_seed, **kwargs)
 
     else:
         optimus = ColumnTransformer(
@@ -114,7 +116,7 @@ def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = N
         if estimator == {} or task not in estimator.get('task', ''):
             raise ValueError('Функция отсутствует или не соответствует задаче!')
 
-        estimator = estimator['model'](**kwargs)
+        estimator = estimator['model'](random_seed=random_seed, **kwargs)
 
     pipe = Pipeline(
         steps = [
@@ -203,5 +205,3 @@ def the_end(num: int = 1) -> pd.DataFrame:
     res[tgt] = pipe.predict(test) if task == 'regression' else encoder.inverse_transform(pipe.predict(test))
 
     return res
-
-print(unimodel('dtc'))
