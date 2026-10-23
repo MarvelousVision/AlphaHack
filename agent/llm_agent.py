@@ -1,6 +1,7 @@
 import json
 from openai import AsyncOpenAI
 from core.schemas import ExperimentPlan
+from core.schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
 from agent.prompts import SYSTEM_PROMPT_TEMPLATE, models_list
 
 class AutoResearchAgent:
@@ -25,24 +26,34 @@ class AutoResearchAgent:
 
     def _check_bounds(self, model_name: str, params: dict) -> dict:
         clamped = dict(params)
-        bounds = {
-            "learning_rate": (0.01, 0.3),
-            "iterations": (100, 2000),
-            "n_estimators": (100, 2000),
-            "max_depth": (3, 30),
-            "num_leaves": (15, 127),
-            "min_child_samples": (10, 100),
-            "reg_lambda": (0.0, 10.0),
-            "C": (0.01, 100.0),
-            "epsilon": (0.01, 1.0)
-        }
+        
+        bounds = PARAM_RANGES.get(model_name, {})
 
-        for param, (min_val, max_val) in bounds.items():
-            if param in clamped and clamped[param] is not None:
-                if isinstance(clamped[param], float):
-                    clamped[param] = round(max(min_val, min(clamped[param], max_val)), 4)
-                elif isinstance(clamped[param], int):
-                    clamped[param] = max(min_val, min(clamped[param], max_val))
+        # 2. Исключение для CatBoost: его нет в PARAM_RANGES (или он там пуст)
+        # Если Ярик добавит CatBoost в схему, этот блок можно будет удалить.
+        if model_name in ("cbr", "cbc") and not bounds:
+            bounds = {
+                "iterations": (200, 1500),
+                "depth": (4, 8),
+                "learning_rate": (0.03, 0.1),
+                "l2_leaf_reg": (1, 10)
+            }
+
+        # 3. Зажимаем параметры по границам
+        for param, value in clamped.items():
+            if value is None:
+                continue
+                
+            if param in bounds:
+                min_val, max_val = bounds[param]
+                
+                # Если параметр целочисленный
+                if param in INT_PARAMS or isinstance(value, int):
+                    clamped[param] = max(min_val, min(int(value), max_val))
+                # Если вещественный (learning_rate, C, epsilon)
+                elif isinstance(value, float):
+                    clamped[param] = round(max(min_val, min(value, max_val)), 4)
+                    
         return clamped
 
     async def propose(
