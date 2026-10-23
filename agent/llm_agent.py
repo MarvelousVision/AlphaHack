@@ -1,8 +1,7 @@
 import json
 from openai import AsyncOpenAI
-from core.schemas import ExperimentPlan
 from core.schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
-from agent.prompts import SYSTEM_PROMPT_TEMPLATE, models_list
+from agent.prompts import SYSTEM_PROMPT_TEMPLATE
 
 class AutoResearchAgent:
     def __init__(self, client: AsyncOpenAI, model_name: str):
@@ -61,7 +60,6 @@ class AutoResearchAgent:
             task_description=task_info.get("description", ""),
             n_rows=task_info.get("n_rows", "unknown"),
             remaining_time_sec=remaining_time_sec,
-            models_list=", ".join(f'"{m}"' for m in models_list),
             best_str=best_str,
             history_str=history_str
         )
