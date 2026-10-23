@@ -32,7 +32,16 @@ class Orchestrator:
         self.time_budget_sec = time_budget_sec
         self.final_reserve_sec = final_reserve_sec
         self.history_path = Path(history_path)
+    def estimate_duration(self, plan: ExperimentPlan) -> float:
+        max_duration = self.tracker.get_max_model_duration(plan.model.name)
 
+        if max_duration is None:
+            return float(plan.estimated_time_sec)
+
+        return max(
+            float(plan.estimated_time_sec),
+            max_duration * 1.2,
+        )
     def get_final_reserve(self) -> float:
         durations = [
             entry["result"].duration_sec
@@ -94,7 +103,9 @@ class Orchestrator:
                 continue            
             elapsed = time.perf_counter() - start
             research_time = budget - elapsed - self.get_final_reserve()
-
+            if research_time <= 0:
+                print("Research budget exhausted after agent response")
+                break
             estimated_duration = self.estimate_duration(plan)
 
             if estimated_duration > research_time:
@@ -108,6 +119,10 @@ class Orchestrator:
             result = self.runner.run(plan)
 
             self.tracker.add_experiment(plan, result)
+            try:
+                self.tracker.save_history(str(self.history_path))
+            except OSError as exc:
+                print(f"Failed to save experiment history: {exc}")
             self.tracker.save_history(str(self.history_path))
 
             score = (
@@ -121,6 +136,16 @@ class Orchestrator:
                 f"model={plan.model.name}, "
                 f"status={result.status}, "
                 f"score={score}"
+            )
+        best_plan = self.tracker.get_best_plan(metric_name)
+        best_result = self.tracker.get_best(metric_name)
+
+        if best_plan is not None and best_result is not None:
+            print(
+                f"[BEST] model={best_plan.model.name}, "
+                f"metric={metric_name}, "
+                f"score={best_result.metric.value:.4f}",
+                flush=True,
             )
 
         return {

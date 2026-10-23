@@ -57,6 +57,15 @@ async def run_ml_pipeline(
 ):
 
     baseline_result = runner.run(baseline_plan)
+    if baseline_result.status == "success":
+        print(
+            f"[BASELINE] Модель: {baseline_plan.model.name}, "
+            f"CV RMSE: {baseline_result.metric.value:.4f}, "
+            f"Время: {baseline_result.duration_sec:.1f} сек",
+            flush=True,
+        )
+    else:
+        print(f"[BASELINE] Ошибка: {baseline_result.error}", flush=True)
     if baseline_result.status != "success":
         raise RuntimeError(f"Baseline failed: {baseline_result.error}")
     
@@ -68,24 +77,44 @@ async def run_ml_pipeline(
     print(f"Baseline saved: {output_path}")
 
     remaining = TOTAL_BUDGET - (time.perf_counter() - started_at)
-    if remaining > FINAL_RESERVE:
+    if remaining > FINAL_RESERVE and os.getenv("BASELINE_ONLY") != "1":
         try:
             await orchestrator.run(metric_name, time_budget_sec=remaining)
         except Exception as exc:
             print(f"AutoResearch failed: {exc}. Keeping baseline.")
 
     best_plan = tracker.get_best_plan(metric_name)
+    best_result = tracker.get_best(metric_name)
+
+    if best_plan is not None and best_result is not None:
+        print(
+            f"[FINAL] Лучшая модель: {best_plan.model.name}, "
+            f"CV {metric_name}: {best_result.metric.value:.4f}",
+            flush=True,
+        )
+
     if best_plan is not None and best_plan != baseline_plan:
         remaining_time = TOTAL_BUDGET - (time.perf_counter() - started_at)
-        estimated_final_time = orchestrator.get_final_reserve()
-
-        if remaining_time > estimated_final_time:
+        max_duration = tracker.get_max_model_duration(best_plan.model.name)
+        estimated_final_time = (
+            max_duration * 1.2
+            if max_duration is not None
+            else 600
+        )
+        if remaining_time > estimated_final_time + 60:
             try:
                 predictions = train_and_predict(best_plan)
                 save_submission(predictions, sample_path, output_path, target_name)
                 print("Best model submission saved.")
             except Exception as exc:
                 print(f"Final training failed: {exc}. Keeping baseline.")
+        else:
+            print(
+                f"[FINAL SKIPPED] Осталось {remaining_time:.0f} сек, "
+                f"оценка обучения {estimated_final_time:.0f} сек. "
+                f"Сохраняем baseline.",
+                flush=True,
+            )
 
     return tracker.get_best(metric_name)
 
@@ -106,10 +135,6 @@ async def run_solution(task_dir, output_path):
         data_dir = task_dir / Path(match.group(1)).parent
     else:
         data_dir = task_dir
-
-    if not (data_dir / "train.csv").is_file():
-        raise FileNotFoundError(f"Training data not found: {data_dir}")
-
     if not (data_dir / "train.csv").is_file():
         raise FileNotFoundError(f"Training data not found: {data_dir}")
 
@@ -220,3 +245,4 @@ if __name__ == "__main__":
             output_path=str(task_path.parent / "submission.csv"),
         )
     )
+
