@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 import os
 import sys
@@ -17,10 +17,8 @@ from core.experiment_tracker import ExperimentTracker
 from core.orchestrator import Orchestrator
 from data_tools.preprocessing import prepare_data
 
-
 TOTAL_BUDGET = 10800
 FINAL_RESERVE = 1800
-
 
 def save_submission(predictions, sample_submission_path, output_path, target_name):
     sample = pd.read_csv(sample_submission_path)
@@ -60,7 +58,6 @@ async def run_ml_pipeline(
     if baseline_result.status == "success":
         print(
             f"[BASELINE] Модель: {baseline_plan.model.name}, "
-            f"CV RMSE: {baseline_result.metric.value:.4f}, "
             f"Время: {baseline_result.duration_sec:.1f} сек",
             flush=True,
         )
@@ -75,6 +72,7 @@ async def run_ml_pipeline(
     predictions = train_and_predict(baseline_plan)
     save_submission(predictions, sample_path, output_path, target_name)
     print(f"Baseline saved: {output_path}")
+    saved_plan = baseline_plan
 
     remaining = TOTAL_BUDGET - (time.perf_counter() - started_at)
     if remaining > FINAL_RESERVE and os.getenv("BASELINE_ONLY") != "1":
@@ -105,7 +103,10 @@ async def run_ml_pipeline(
             try:
                 predictions = train_and_predict(best_plan)
                 save_submission(predictions, sample_path, output_path, target_name)
+                saved_plan = best_plan
+
                 print("Best model submission saved.")
+                
             except Exception as exc:
                 print(f"Final training failed: {exc}. Keeping baseline.")
         else:
@@ -115,28 +116,61 @@ async def run_ml_pipeline(
                 f"Сохраняем baseline.",
                 flush=True,
             )
-
+    print(
+            f"[SUBMISSION] Сохранена модель: {saved_plan.model.name}",
+            flush=True,
+        )
     return tracker.get_best(metric_name)
 
+def resolve_data_dir(task_dir: Path) -> Path:
+    if (task_dir / "train.csv").is_file():
+        return task_dir
 
-async def run_solution(task_dir, output_path):
-    started_at = time.perf_counter()
-    task_dir = Path(task_dir)
-    import re
     task_file = task_dir / "task.md"
-    task_text = task_file.read_text(encoding="utf-8")
 
-    match = re.search(
-        r"([\w./-]+/train\.csv)",
-        task_text
+    if task_file.is_file():
+        task_text = task_file.read_text(encoding="utf-8")
+
+        import re
+
+        matches = re.findall(
+            r"[\w./\\-]+[/\\]train\.csv",
+            task_text,
+            flags=re.IGNORECASE,
+        )
+
+        for relative_path in matches:
+            relative_path = relative_path.replace("\\", "/")
+            candidate = task_dir / Path(relative_path).parent
+
+            if (candidate / "train.csv").is_file():
+                return candidate
+
+    candidates = [
+        path.parent
+        for path in task_dir.rglob("train.csv")
+        if (path.parent / "test.csv").is_file()
+        and (path.parent / "sample_submission.csv").is_file()
+    ]
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    if not candidates:
+        raise FileNotFoundError(
+            f"Не найден набор train/test/sample_submission в {task_dir}"
+        )
+    raise RuntimeError(
+        f"Найдено несколько наборов данных: {candidates}"
     )
 
-    if match:
-        data_dir = task_dir / Path(match.group(1)).parent
-    else:
-        data_dir = task_dir
-    if not (data_dir / "train.csv").is_file():
-        raise FileNotFoundError(f"Training data not found: {data_dir}")
+async def run_solution(task_dir, output_path):
+    import re 
+    started_at = time.perf_counter()
+    task_dir = Path(task_dir).resolve()
+
+    data_dir = resolve_data_dir(task_dir)
+    print(f"[DATA] Каталог данных: {data_dir}", flush=True)
 
     sample_path = data_dir / "sample_submission.csv"
 
@@ -147,18 +181,28 @@ async def run_solution(task_dir, output_path):
     metric_name = "rmse" if task == "regression" else "f1_macro"
     engine_metric = "RMSE" if task == "regression" else "f1_macro"
 
+    # Подготавливаем историю экспериментов
     engine_history = Path("artifacts/experiments.json")
     engine_history.parent.mkdir(parents=True, exist_ok=True)
     engine_history.write_text("{}", encoding="utf-8")
 
+    # Передаём данные в ML Engine
     sys.modules.setdefault("solution", sys.modules[__name__])
+
     globals().update({
-        "X_train": X_train.to_pandas(), "y": y.to_pandas(),
-        "X_test": X_test.to_pandas(), "ids": ids.to_pandas(),
-        "numeric": numeric, "cat": cat, "task": task,
-        "tgt": tgt, "id_name": id_name, "METRIC": engine_metric,
+        "X_train": X_train.to_pandas(),
+        "y": y.to_pandas(),
+        "X_test": X_test.to_pandas(),
+        "ids": ids.to_pandas(),
+        "numeric": numeric,
+        "cat": cat,
+        "task": task,
+        "tgt": tgt,
+        "id_name": id_name,
+        "METRIC": engine_metric,
         "WAY_TO_JSON": str(engine_history),
     })
+
     from data_tools.models import unimodel, the_end
 
     experiment_numbers = {}
@@ -203,7 +247,13 @@ async def run_solution(task_dir, output_path):
         "hypothesis": "Initial CatBoost baseline",
         "model": {
             "name": "cbr" if task == "regression" else "cbc",
-            "hyperparameters": {"iterations": 100, "verbose": False},
+            "hyperparameters": {
+                "iterations": 100,
+                "depth": 8,
+                "learning_rate": 0.05,
+                "random_seed": 42,
+                "verbose": False,
+            },
         },
         "features": {"strategy": "baseline", "drop_columns": []},
         "reasoning": "Get a valid submission before AutoResearch",
@@ -216,15 +266,17 @@ async def run_solution(task_dir, output_path):
     task_info = {
         "task_type": task,
         "metric_name": metric_name,
+        "n_rows": len(X_train),  
         "description": description_path.read_text(encoding="utf-8")
         if description_path.exists() else "",
-    }
+        }
 
     async with AsyncOpenAI() as client:
         agent = AutoResearchAgent(client=client, model_name=os.environ["OPENAI_MODEL"])
         orchestrator = Orchestrator(
             agent=agent, runner=runner, tracker=tracker, task_info=task_info,
-            max_experiments=300, time_budget_sec=TOTAL_BUDGET,
+            max_experiments=300,
+            time_budget_sec=TOTAL_BUDGET,
             final_reserve_sec=FINAL_RESERVE,
             history_path="artifacts/history.jsonl",
         )
@@ -245,4 +297,3 @@ if __name__ == "__main__":
             output_path=str(task_path.parent / "submission.csv"),
         )
     )
-

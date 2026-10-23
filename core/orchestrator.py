@@ -99,8 +99,19 @@ class Orchestrator:
                 for entry in self.tracker.get_history()
             )
             if already_tested:
-                print(f"[iteration {iteration + 1}] Duplicate experiment skipped")
-                continue            
+                consecutive_duplicates += 1
+                print(
+                    f"[iteration {iteration + 1}] "
+                    f"Duplicate experiment ({consecutive_duplicates}/3)"
+                )
+
+                if consecutive_duplicates >= 3:
+                    print("Too many duplicate experiments. Stopping research.")
+                    break
+
+                continue
+
+            consecutive_duplicates = 0           
             elapsed = time.perf_counter() - start
             research_time = budget - elapsed - self.get_final_reserve()
             if research_time <= 0:

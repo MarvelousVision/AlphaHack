@@ -57,11 +57,26 @@ PARAM_RANGES = {
         "colsample_bytree": (0.6, 1.0),
         "reg_lambda": (0, 10),
     },
+    "cbr": {
+        "iterations": (100, 2000),
+        "depth": (2, 10),
+        "learning_rate": (0.01, 0.3),
+        "l2_leaf_reg": (1, 20),
+        "random_seed": (0, 2147483647),
+    },
+    "cbc": {
+        "iterations": (100, 2000),
+        "depth": (2, 10),
+        "learning_rate": (0.01, 0.3),
+        "l2_leaf_reg": (1, 20),
+        "random_seed": (0, 2147483647),
+    },
 }
 
 INT_PARAMS = {
     "max_depth", "min_samples_leaf", "n_estimators",
     "num_leaves", "min_child_samples",
+    "iterations", "depth", "random_seed",
 }
 class ModelConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -79,18 +94,17 @@ class ModelConfig(BaseModel):
     @model_validator(mode="after")
     def validate_hyperparameters(self):
         params = self.hyperparameters
-
-        if self.name in ("cbr", "cbc"):
-            return self
-
         allowed = PARAM_RANGES.get(self.name, {})
-
+       
         for key, value in params.items():
             if self.name in ("svc", "svr") and key == "gamma":
                 if value not in ("scale", "auto"):
                     raise ValueError("gamma must be scale or auto")
                 continue
-
+            if self.name in ("cbr", "cbc") and key == "verbose":
+                if type(value) is not bool:
+                    raise ValueError("verbose must be boolean")
+                continue
             if key not in allowed:
                 raise ValueError(
                     f"{key} is not allowed for {self.name}"
