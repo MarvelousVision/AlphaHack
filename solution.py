@@ -93,13 +93,15 @@ async def run_ml_pipeline(
 
     if best_plan is not None and best_plan != baseline_plan:
         remaining_time = TOTAL_BUDGET - (time.perf_counter() - started_at)
+        
         max_duration = tracker.get_max_model_duration(best_plan.model.name)
         estimated_final_time = (
-            max_duration * 1.2
+            max_duration * 1.5
             if max_duration is not None
-            else 600
+            else 900
         )
-        if remaining_time > estimated_final_time + 60:
+        SAFETY_MARGIN = 300
+        if remaining_time > estimated_final_time + SAFETY_MARGIN:
             try:
                 predictions = train_and_predict(best_plan)
                 save_submission(predictions, sample_path, output_path, target_name)
@@ -123,45 +125,54 @@ async def run_ml_pipeline(
     return tracker.get_best(metric_name)
 
 def resolve_data_dir(task_dir: Path) -> Path:
-    if (task_dir / "train.csv").is_file():
-        return task_dir
+    import re
 
+    task_dir = Path(task_dir).resolve()
     task_file = task_dir / "task.md"
 
-    if task_file.is_file():
-        task_text = task_file.read_text(encoding="utf-8")
+    if not task_file.is_file():
+        raise FileNotFoundError(f"Не найден task.md: {task_file}")
 
-        import re
+    task_text = task_file.read_text(encoding="utf-8")
 
-        matches = re.findall(
-            r"[\w./\\-]+[/\\]train\.csv",
-            task_text,
-            flags=re.IGNORECASE,
+    paths = re.findall(
+        r"[A-Za-z0-9_./\\-]+[/\\]train\.csv",
+        task_text,
+        flags=re.IGNORECASE,
+    )
+
+    for relative_path in paths:
+        relative_path = relative_path.replace("\\", "/").lstrip("/")
+        candidate = (task_dir / Path(relative_path).parent).resolve()
+
+        # Запрещаем выход за пределы каталога задачи
+        if not candidate.is_relative_to(task_dir):
+            continue
+
+        required = (
+            "train.csv",
+            "test.csv",
+            "sample_submission.csv",
         )
 
-        for relative_path in matches:
-            relative_path = relative_path.replace("\\", "/")
-            candidate = task_dir / Path(relative_path).parent
-
-            if (candidate / "train.csv").is_file():
-                return candidate
-
+        if all((candidate / name).is_file() for name in required):
+            return candidate
     candidates = [
-        path.parent
-        for path in task_dir.rglob("train.csv")
-        if (path.parent / "test.csv").is_file()
-        and (path.parent / "sample_submission.csv").is_file()
+        p.parent.resolve()
+        for p in task_dir.rglob("train.csv")
+        if (p.parent / "test.csv").is_file()
+        and (p.parent / "sample_submission.csv").is_file()
     ]
+
+    candidates = list(dict.fromkeys(candidates))
 
     if len(candidates) == 1:
         return candidates[0]
 
-    if not candidates:
-        raise FileNotFoundError(
-            f"Не найден набор train/test/sample_submission в {task_dir}"
-        )
-    raise RuntimeError(
-        f"Найдено несколько наборов данных: {candidates}"
+    raise FileNotFoundError(
+        f"Не удалось однозначно определить набор данных для {task_file}. "
+        f"Пути из инструкции: {paths}. "
+        f"Найденные каталоги: {candidates}"
     )
 
 async def run_solution(task_dir, output_path):
@@ -175,7 +186,8 @@ async def run_solution(task_dir, output_path):
     sample_path = data_dir / "sample_submission.csv"
 
     X_train, y, X_test, numeric, cat, task, ids, tgt, id_name = prepare_data(
-        str(data_dir)
+        str(data_dir),
+        use_interactions=True,
     )
 
     metric_name = "rmse" if task == "regression" else "f1_macro"
