@@ -1,9 +1,3 @@
-models_list = [
-    'cbr', 'lbr', 'xbr', 'rfr', 'dtr', 'svr', 'lvr', 'lnr',
-    'cbc', 'lbc', 'xbc', 'rfc', 'dtc', 'svc', 'lvc'
-]
-
-
 SYSTEM_PROMPT_TEMPLATE = """
 Ты — Senior Data Scientist (AutoML Agent). Твоя цель — найти оптимальную ML-модель и ее гиперпараметры, минимизируя ошибку (или максимизируя качество) за ограниченное время.
 
@@ -59,7 +53,7 @@ SYSTEM_PROMPT_TEMPLATE = """
   "action": "run_experiment",
   "hypothesis": "краткое описание гипотезы",
   "model": {{
-    "name": "cbr"{models_list},
+    "name": "cbr",
     "hyperparameters": {{ "param1": value1 }}
   }},
   "features": {{ "strategy": "baseline", "drop_columns": [] }},
