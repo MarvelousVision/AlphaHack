@@ -175,13 +175,13 @@ def choir(m1: str,
 
             for parameter in config['params']:
                 if isinstance(parameter[1], float):
-                    value = trial.suggest_floatl(*parameter)
+                    value = trial.suggest_float(*parameter)
                 elif isinstance(parameter[1], int):
                     value = trial.suggest_int(*parameter)
                 else:
-                    value = trial.suggest_categorica(parameter[0], [*parameter[1:]])
+                    value = trial.suggest_categorical(parameter[0], [*parameter[1:]])
 
-                params[f'{parameter[0]}'] = value
+                params[f'model_{parameter[0]}'] = value
 
             candidate = clone(pipeline).set_params(**params)
 
