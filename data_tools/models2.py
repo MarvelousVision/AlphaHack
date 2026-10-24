@@ -195,7 +195,7 @@ def choir(m1: str,
             ).mean()
 
         remaining = time_left - (monotonic() - started)
-
+        if remaining < 30 * 60: break
         tuning_budget = max(1.0, (remaining - 300) / (4 - index))
 
         study = optuna.create_study(
