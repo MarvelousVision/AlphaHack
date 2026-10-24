@@ -181,7 +181,7 @@ def choir(m1: str,
                 else:
                     value = trial.suggest_categorical(parameter[0], [*parameter[1:]])
 
-                params[f'model_{parameter[0]}'] = value
+                params[f'model__{parameter[0]}'] = value
 
             candidate = clone(pipeline).set_params(**params)
 
@@ -195,30 +195,37 @@ def choir(m1: str,
             ).mean()
 
         remaining = time_left - (monotonic() - started)
-        if remaining < 30 * 60: break
-        tuning_budget = max(1.0, (remaining - 300) / (4 - index))
+        if remaining < 30 * 60:
+            if not predictions:
+                raise RuntimeError('All ensemble models failed!')
+            else:
+                break
+        try:
+            tuning_budget = max(1.0, (remaining - 300) / (4 - index))
 
-        study = optuna.create_study(
-            direction='maximize',
-            sampler=optuna.samplers.TPESampler(seed=42),
-        )
-        study.optimize(
-            objective,
-            n_trials=30,
-            timeout=tuning_budget,
-        )
+            study = optuna.create_study(
+                direction='maximize',
+                sampler=optuna.samplers.TPESampler(seed=42),
+            )
+            study.optimize(
+                objective,
+                n_trials=30,
+                timeout=tuning_budget,
+            )
 
-        best_model = clone(pipeline).set_params(**{
-            f'model__{parameter}': value
-            for parameter, value in study.best_params.items()
-        })
-        best_model.fit(model_train, target)
+            best_model = clone(pipeline).set_params(**{
+                f'model__{parameter}': value
+                for parameter, value in study.best_params.items()
+            })
+            best_model.fit(model_train, target)
 
-        predictions.append(
-            np.asarray(best_model.predict(model_test)).ravel()
-        )
-        scores.append(study.best_value)
-        durations.append(monotonic() - model_started)
+            predictions.append(
+                np.asarray(best_model.predict(model_test)).ravel()
+            )
+            scores.append(study.best_value)
+            durations.append(monotonic() - model_started)
+        except:
+            continue
 
     if task == 'regression':
             result = np.mean(predictions, axis=0)
