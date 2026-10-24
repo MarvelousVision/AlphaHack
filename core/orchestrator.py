@@ -15,6 +15,7 @@ class Orchestrator:
         max_experiments=10,
         time_budget_sec=10800,
         final_reserve_sec=1800,
+        estimated_final_train_sec=0,
         history_path="artifacts/history.jsonl",
     ):
         if max_experiments < 1:
@@ -30,6 +31,9 @@ class Orchestrator:
         self.max_experiments = max_experiments
         self.time_budget_sec = time_budget_sec
         self.final_reserve_sec = final_reserve_sec
+        self.estimated_final_train_sec = max(
+            0.0, float(estimated_final_train_sec)
+        )
         self.history_path = Path(history_path)
 
     def estimate_duration(self, plan: ExperimentPlan) -> float:
@@ -56,6 +60,7 @@ class Orchestrator:
         return max(
             self.final_reserve_sec,
             max_duration * 1.5,
+            self.estimated_final_train_sec * 1.5 + 300,
         )
 
     async def run(
@@ -157,7 +162,15 @@ class Orchestrator:
                 )
                 continue
 
+            experiment_start = time.perf_counter()
             result = self.runner.run(plan)
+            experiment_duration = time.perf_counter() - experiment_start
+            print(
+                f"[TIMING] model={plan.model.name}, "
+                f"experiment={experiment_duration:.1f}s, "
+                f"remaining={budget - (time.perf_counter() - start):.1f}s",
+                flush=True,
+            )
 
             self.tracker.add_experiment(plan, result)
 

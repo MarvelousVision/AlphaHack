@@ -69,11 +69,17 @@ async def run_ml_pipeline(
     tracker.add_experiment(baseline_plan, baseline_result)
     tracker.save_history("artifacts/history.jsonl")
 
+    baseline_train_start = time.perf_counter()
     predictions = train_and_predict(baseline_plan)
-    save_submission(predictions, sample_path, output_path, target_name)
+    baseline_full_train_sec = (
+        time.perf_counter() - baseline_train_start
+    )
+    save_submission(
+        predictions, sample_path, output_path, target_name
+    )
     print(f"Baseline saved: {output_path}")
     saved_plan = baseline_plan
-
+    orchestrator.estimated_final_train_sec = baseline_full_train_sec
     remaining = TOTAL_BUDGET - (time.perf_counter() - started_at)
     if remaining > FINAL_RESERVE and os.getenv("BASELINE_ONLY") != "1":
         try:
@@ -93,7 +99,7 @@ async def run_ml_pipeline(
 
     if best_plan is not None and best_plan != baseline_plan:
         remaining_time = TOTAL_BUDGET - (time.perf_counter() - started_at)
-        
+
         max_duration = tracker.get_max_model_duration(best_plan.model.name)
         estimated_final_time = (
             max_duration * 1.5
@@ -187,7 +193,7 @@ async def run_solution(task_dir, output_path):
 
     X_train, y, X_test, numeric, cat, task, ids, tgt, id_name = prepare_data(
         str(data_dir),
-        use_interactions=True,
+        use_interactions=False,
     )
 
     metric_name = "rmse" if task == "regression" else "f1_macro"
