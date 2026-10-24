@@ -7,7 +7,6 @@ from sklearn.base import clone
 from sklearn.svm import SVC, SVR, LinearSVR, LinearSVC
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.metrics import f1_score, make_scorer
 from sklearn.model_selection import cross_val_score, KFold, StratifiedKFold
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
