@@ -17,10 +17,8 @@ from core.experiment_tracker import ExperimentTracker
 from core.orchestrator import Orchestrator
 from data_tools.preprocessing import prepare_data
 
-
 TOTAL_BUDGET = 10800
 FINAL_RESERVE = 1800
-
 
 def save_submission(predictions, sample_submission_path, output_path, target_name):
     sample = pd.read_csv(sample_submission_path)
@@ -57,54 +55,145 @@ async def run_ml_pipeline(
 ):
 
     baseline_result = runner.run(baseline_plan)
+    if baseline_result.status == "success":
+        print(
+            f"[BASELINE] Модель: {baseline_plan.model.name}, "
+            f"Время: {baseline_result.duration_sec:.1f} сек",
+            flush=True,
+        )
+    else:
+        print(f"[BASELINE] Ошибка: {baseline_result.error}", flush=True)
     if baseline_result.status != "success":
         raise RuntimeError(f"Baseline failed: {baseline_result.error}")
     
     tracker.add_experiment(baseline_plan, baseline_result)
     tracker.save_history("artifacts/history.jsonl")
 
+    baseline_train_start = time.perf_counter()
     predictions = train_and_predict(baseline_plan)
-    save_submission(predictions, sample_path, output_path, target_name)
+    baseline_full_train_sec = (
+        time.perf_counter() - baseline_train_start
+    )
+    save_submission(
+        predictions, sample_path, output_path, target_name
+    )
     print(f"Baseline saved: {output_path}")
-
+    saved_plan = baseline_plan
+    orchestrator.estimated_final_train_sec = baseline_full_train_sec
     remaining = TOTAL_BUDGET - (time.perf_counter() - started_at)
-    if remaining > FINAL_RESERVE:
+    if remaining > FINAL_RESERVE and os.getenv("BASELINE_ONLY") != "1":
         try:
             await orchestrator.run(metric_name, time_budget_sec=remaining)
         except Exception as exc:
             print(f"AutoResearch failed: {exc}. Keeping baseline.")
 
     best_plan = tracker.get_best_plan(metric_name)
+    best_result = tracker.get_best(metric_name)
+
+    if best_plan is not None and best_result is not None:
+        print(
+            f"[FINAL] Лучшая модель: {best_plan.model.name}, "
+            f"CV {metric_name}: {best_result.metric.value:.4f}",
+            flush=True,
+        )
+
     if best_plan is not None and best_plan != baseline_plan:
-        if TOTAL_BUDGET - (time.perf_counter() - started_at) > 60:
+        remaining_time = TOTAL_BUDGET - (time.perf_counter() - started_at)
+
+        max_duration = tracker.get_max_model_duration(best_plan.model.name)
+        estimated_final_time = (
+            max_duration * 1.5
+            if max_duration is not None
+            else 900
+        )
+        SAFETY_MARGIN = 300
+        if remaining_time > estimated_final_time + SAFETY_MARGIN:
             try:
                 predictions = train_and_predict(best_plan)
                 save_submission(predictions, sample_path, output_path, target_name)
+                saved_plan = best_plan
+
                 print("Best model submission saved.")
+                
             except Exception as exc:
                 print(f"Final training failed: {exc}. Keeping baseline.")
-
+        else:
+            print(
+                f"[FINAL SKIPPED] Осталось {remaining_time:.0f} сек, "
+                f"оценка обучения {estimated_final_time:.0f} сек. "
+                f"Сохраняем baseline.",
+                flush=True,
+            )
+    print(
+            f"[SUBMISSION] Сохранена модель: {saved_plan.model.name}",
+            flush=True,
+        )
     return tracker.get_best(metric_name)
 
+def resolve_data_dir(task_dir: Path) -> Path:
+    import re
+
+    task_dir = Path(task_dir).resolve()
+    task_file = task_dir / "task.md"
+
+    if not task_file.is_file():
+        raise FileNotFoundError(f"Не найден task.md: {task_file}")
+
+    task_text = task_file.read_text(encoding="utf-8")
+
+    paths = re.findall(
+        r"[A-Za-z0-9_./\\-]+[/\\]train\.csv",
+        task_text,
+        flags=re.IGNORECASE,
+    )
+
+    for relative_path in paths:
+        relative_path = relative_path.replace("\\", "/").lstrip("/")
+        candidate = (task_dir / Path(relative_path).parent).resolve()
+
+        # Запрещаем выход за пределы каталога задачи
+        if not candidate.is_relative_to(task_dir):
+            continue
+
+        required = (
+            "train.csv",
+            "test.csv",
+            "sample_submission.csv",
+        )
+
+        if all((candidate / name).is_file() for name in required):
+            return candidate
+    candidates = [
+        p.parent.resolve()
+        for p in task_dir.rglob("train.csv")
+        if (p.parent / "test.csv").is_file()
+        and (p.parent / "sample_submission.csv").is_file()
+    ]
+
+    candidates = list(dict.fromkeys(candidates))
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    raise FileNotFoundError(
+        f"Не удалось однозначно определить набор данных для {task_file}. "
+        f"Пути из инструкции: {paths}. "
+        f"Найденные каталоги: {candidates}"
+    )
 
 async def run_solution(task_dir, output_path):
+    import re 
     started_at = time.perf_counter()
-    task_dir = Path(task_dir)
+    task_dir = Path(task_dir).resolve()
 
-    # Определяем путь к данным из task.md
-    data_dir = task_dir / "regression" / "participants"
-
-    # Поддержка локальной структуры
-    if not data_dir.is_dir():
-        data_dir = task_dir
-
-    if not (data_dir / "train.csv").is_file():
-        raise FileNotFoundError(f"Training data not found: {data_dir}")
+    data_dir = resolve_data_dir(task_dir)
+    print(f"[DATA] Каталог данных: {data_dir}", flush=True)
 
     sample_path = data_dir / "sample_submission.csv"
 
     X_train, y, X_test, numeric, cat, task, ids, tgt, id_name = prepare_data(
-        str(data_dir)
+        str(data_dir),
+        use_interactions=False,
     )
 
     metric_name = "rmse" if task == "regression" else "f1_macro"
@@ -116,15 +205,47 @@ async def run_solution(task_dir, output_path):
 
     sys.modules.setdefault("solution", sys.modules[__name__])
 
-    sys.modules.setdefault("solution", sys.modules[__name__])
     globals().update({
-        "X_train": X_train.to_pandas(), "y": y.to_pandas(),
-        "X_test": X_test.to_pandas(), "ids": ids.to_pandas(),
-        "numeric": numeric, "cat": cat, "task": task,
-        "tgt": tgt, "id_name": id_name, "METRIC": engine_metric,
+        "X_train": X_train.to_pandas(),
+        "y": y.to_pandas(),
+        "X_test": X_test.to_pandas(),
+        "ids": ids.to_pandas(),
+        "numeric": numeric,
+        "cat": cat,
+        "task": task,
+        "tgt": tgt,
+        "id_name": id_name,
+        "METRIC": engine_metric,
         "WAY_TO_JSON": str(engine_history),
     })
+
+    polars_data = {
+        "X_train": X_train,
+        "y": y,
+        "X_test": X_test,
+        "ids": ids,
+    }
     from data_tools.models import unimodel, the_end
+    def execute_choir(models, time_budget_sec):
+        from data_tools.models2 import choir
+
+        result = choir(
+            *models,
+            time_left=time_budget_sec,
+            X_train=polars_data["X_train"],
+            y=polars_data["y"],
+            X_test=polars_data["X_test"],
+            ids=polars_data["ids"],
+        )
+        if not isinstance(result, pd.DataFrame):
+            raise TypeError("choir must return a pandas DataFrame")
+        if tgt not in result.columns:
+            raise ValueError(f"Missing target column: {tgt}")
+
+        if len(result) != len(X_test):
+            raise ValueError("Incorrect number of predictions")
+
+        return result[tgt].to_numpy()
 
     experiment_numbers = {}
 
@@ -168,7 +289,13 @@ async def run_solution(task_dir, output_path):
         "hypothesis": "Initial CatBoost baseline",
         "model": {
             "name": "cbr" if task == "regression" else "cbc",
-            "hyperparameters": {"iterations": 100, "verbose": False},
+            "hyperparameters": {
+                "iterations": 100,
+                "depth": 8,
+                "learning_rate": 0.05,
+                "random_seed": 42,
+                "verbose": False,
+            },
         },
         "features": {"strategy": "baseline", "drop_columns": []},
         "reasoning": "Get a valid submission before AutoResearch",
@@ -181,24 +308,108 @@ async def run_solution(task_dir, output_path):
     task_info = {
         "task_type": task,
         "metric_name": metric_name,
+        "n_rows": len(X_train),  
         "description": description_path.read_text(encoding="utf-8")
         if description_path.exists() else "",
-    }
+        }
 
     async with AsyncOpenAI() as client:
-        agent = AutoResearchAgent(client=client, model_name=os.environ["OPENAI_MODEL"])
+        agent = AutoResearchAgent(
+            client=client,
+            model_name=os.environ["OPENAI_MODEL"],
+        )
+
         orchestrator = Orchestrator(
-            agent=agent, runner=runner, tracker=tracker, task_info=task_info,
-            max_experiments=300, time_budget_sec=TOTAL_BUDGET,
+            agent=agent,
+            runner=runner,
+            tracker=tracker,
+            task_info=task_info,
+            max_experiments=300,
+            time_budget_sec=TOTAL_BUDGET,
             final_reserve_sec=FINAL_RESERVE,
             history_path="artifacts/history.jsonl",
         )
+
+        if os.getenv("ENSEMBLE_ENABLED", "0") == "1":
+            print("[ENSEMBLE] Training fallback baseline", flush=True)
+            baseline_result = runner.run(baseline_plan)
+
+            if baseline_result.status != "success":
+                raise RuntimeError(
+                    f"Fallback baseline failed: {baseline_result.error}"
+                )
+            baseline_predictions = train_and_predict(baseline_plan)
+            save_submission(
+                baseline_predictions,
+                sample_path,
+                output_path,
+                tgt,
+            )
+            print("[BASELINE] Fallback submission saved", flush=True)
+            try:
+                remaining = TOTAL_BUDGET - (
+                    time.perf_counter() - started_at
+                )
+                if remaining <= 300:
+                    raise TimeoutError(
+                        "Not enough time for ensemble"
+                    )
+                plan = await orchestrator.propose_ensemble(
+                    remaining_time_sec=remaining
+                )
+                remaining = TOTAL_BUDGET - (
+                    time.perf_counter() - started_at
+                )
+                if remaining <= 300:
+                    raise TimeoutError(
+                        "Not enough time after Qwen response"
+                    )
+                result = await orchestrator.run_ensemble(
+                    raw_plan=plan,
+                    choir=lambda m1, m2, m3, time_left: execute_choir(
+                        (m1, m2, m3),
+                        time_left,
+                    ),
+                    task_type=task,
+                    time_budget_sec=remaining,
+                )
+                save_submission(
+                    result["predictions"],
+                    sample_path,
+                    output_path,
+                    tgt,
+                )
+
+                print("[ENSEMBLE] Submission saved", flush=True)
+                return result
+
+            except Exception as exc:
+                print(
+                    f"[ENSEMBLE FAILED] "
+                    f"{type(exc).__name__}: {exc}",
+                    flush=True,
+                )
+                print(
+                    "[FALLBACK] Keeping baseline submission",
+                    flush=True,
+                )
+                return {
+                    "status": "fallback",
+                    "error": str(exc),
+                }
+
         return await run_ml_pipeline(
-            runner, tracker, orchestrator, baseline_plan, train_and_predict,
-            sample_path, output_path, tgt, metric_name, started_at,
+            runner,
+            tracker,
+            orchestrator,
+            baseline_plan,
+            train_and_predict,
+            sample_path,
+            output_path,
+            tgt,
+            metric_name,
+            started_at,
         )
-
-
 if __name__ == "__main__":
     import asyncio
 
