@@ -226,6 +226,8 @@ def choir(m1: str,
             durations.append(monotonic() - model_started)
         except:
             continue
+        if not predictions:
+            raise RuntimeError('All ensemble models failed!')
 
     if task == 'regression':
             result = np.mean(predictions, axis=0)
