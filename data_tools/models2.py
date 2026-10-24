@@ -1,7 +1,6 @@
 import optuna
 import numpy as np
 import pandas as pd
-from typing import Any
 from time import monotonic
 from sklearn.base import clone
 from sklearn.svm import SVC, SVR, LinearSVR, LinearSVC
@@ -66,19 +65,6 @@ MODELS = {
             'task': ('binary', 'multiclass'),
             'params': (('n_estimators', 100, 1000),)}
 }
-
-def encode(what = None) -> Any:
-    if what is None: return LabelEncoder().fit_transform(y)
-    return ColumnTransformer(
-        transformers=[
-            ('encoder', OneHotEncoder(), cat)
-        ],
-        remainder='passthrough'
-    ).fit_transform(what)
-
-
-def float_y() -> np.ndarray:
-    return np.ravel(y.to_numpy().astype(float))
 
 
 def choir(m1: str, m2: str, m3: str, time_left: int) -> pd.DataFrame:
