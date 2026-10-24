@@ -2,7 +2,7 @@
 import time
 from pathlib import Path
 
-from core.schemas import ExperimentPlan
+from core.schemas import ExperimentPlan, EnsemblePlan
 
 
 class Orchestrator:
@@ -211,4 +211,49 @@ class Orchestrator:
                 0.0,
                 budget - (time.perf_counter() - start),
             ),
+        }
+    async def propose_ensemble(self, remaining_time_sec: float):
+        raw_plan = await self.agent.propose_ensemble(
+            task_info=self.task_info,
+        )
+        plan = EnsemblePlan.model_validate(raw_plan)
+        plan.validate_task(self.task_info["task_type"])
+        return plan
+    async def run_ensemble(
+        self,
+        raw_plan,
+        choir,
+        task_type: str,
+        time_budget_sec: float | None = None,
+    ):
+        plan = EnsemblePlan.model_validate(raw_plan)
+        plan.validate_task(task_type)
+
+        budget = (
+            self.time_budget_sec
+            if time_budget_sec is None
+            else float(time_budget_sec)
+        )
+
+        usable_budget = budget - 300
+
+        if usable_budget <= 0:
+            raise TimeoutError("Not enough time for ensemble")
+
+        started_at = time.perf_counter()
+
+        predictions = choir(
+            *plan.models,
+            time_left=usable_budget,
+        )
+
+        if predictions is None:
+            raise RuntimeError("choir returned no predictions")
+
+        elapsed = time.perf_counter() - started_at
+        return {
+            "plan": plan,
+            "predictions": predictions,
+            "duration_sec": elapsed,
+            "remaining_time_sec": max(0.0, budget - elapsed),
         }

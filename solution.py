@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import os
 import sys
@@ -199,12 +199,10 @@ async def run_solution(task_dir, output_path):
     metric_name = "rmse" if task == "regression" else "f1_macro"
     engine_metric = "RMSE" if task == "regression" else "f1_macro"
 
-    # Подготавливаем историю экспериментов
     engine_history = Path("artifacts/experiments.json")
     engine_history.parent.mkdir(parents=True, exist_ok=True)
     engine_history.write_text("{}", encoding="utf-8")
 
-    # Передаём данные в ML Engine
     sys.modules.setdefault("solution", sys.modules[__name__])
 
     globals().update({
@@ -221,7 +219,33 @@ async def run_solution(task_dir, output_path):
         "WAY_TO_JSON": str(engine_history),
     })
 
+    polars_data = {
+        "X_train": X_train,
+        "y": y,
+        "X_test": X_test,
+        "ids": ids,
+    }
     from data_tools.models import unimodel, the_end
+    def execute_choir(models, time_budget_sec):
+        from data_tools.models2 import choir
+
+        result = choir(
+            *models,
+            time_left=time_budget_sec,
+            X_train=polars_data["X_train"],
+            y=polars_data["y"],
+            X_test=polars_data["X_test"],
+            ids=polars_data["ids"],
+        )
+        if not isinstance(result, pd.DataFrame):
+            raise TypeError("choir must return a pandas DataFrame")
+        if tgt not in result.columns:
+            raise ValueError(f"Missing target column: {tgt}")
+
+        if len(result) != len(X_test):
+            raise ValueError("Incorrect number of predictions")
+
+        return result[tgt].to_numpy()
 
     experiment_numbers = {}
 
@@ -290,20 +314,102 @@ async def run_solution(task_dir, output_path):
         }
 
     async with AsyncOpenAI() as client:
-        agent = AutoResearchAgent(client=client, model_name=os.environ["OPENAI_MODEL"])
+        agent = AutoResearchAgent(
+            client=client,
+            model_name=os.environ["OPENAI_MODEL"],
+        )
+
         orchestrator = Orchestrator(
-            agent=agent, runner=runner, tracker=tracker, task_info=task_info,
+            agent=agent,
+            runner=runner,
+            tracker=tracker,
+            task_info=task_info,
             max_experiments=300,
             time_budget_sec=TOTAL_BUDGET,
             final_reserve_sec=FINAL_RESERVE,
             history_path="artifacts/history.jsonl",
         )
+
+        if os.getenv("ENSEMBLE_ENABLED", "0") == "1":
+            print("[ENSEMBLE] Training fallback baseline", flush=True)
+            baseline_result = runner.run(baseline_plan)
+
+            if baseline_result.status != "success":
+                raise RuntimeError(
+                    f"Fallback baseline failed: {baseline_result.error}"
+                )
+            baseline_predictions = train_and_predict(baseline_plan)
+            save_submission(
+                baseline_predictions,
+                sample_path,
+                output_path,
+                tgt,
+            )
+            print("[BASELINE] Fallback submission saved", flush=True)
+            try:
+                remaining = TOTAL_BUDGET - (
+                    time.perf_counter() - started_at
+                )
+                if remaining <= 300:
+                    raise TimeoutError(
+                        "Not enough time for ensemble"
+                    )
+                plan = await orchestrator.propose_ensemble(
+                    remaining_time_sec=remaining
+                )
+                remaining = TOTAL_BUDGET - (
+                    time.perf_counter() - started_at
+                )
+                if remaining <= 300:
+                    raise TimeoutError(
+                        "Not enough time after Qwen response"
+                    )
+                result = await orchestrator.run_ensemble(
+                    raw_plan=plan,
+                    choir=lambda m1, m2, m3, time_left: execute_choir(
+                        (m1, m2, m3),
+                        time_left,
+                    ),
+                    task_type=task,
+                    time_budget_sec=remaining,
+                )
+                save_submission(
+                    result["predictions"],
+                    sample_path,
+                    output_path,
+                    tgt,
+                )
+
+                print("[ENSEMBLE] Submission saved", flush=True)
+                return result
+
+            except Exception as exc:
+                print(
+                    f"[ENSEMBLE FAILED] "
+                    f"{type(exc).__name__}: {exc}",
+                    flush=True,
+                )
+                print(
+                    "[FALLBACK] Keeping baseline submission",
+                    flush=True,
+                )
+                return {
+                    "status": "fallback",
+                    "error": str(exc),
+                }
+
         return await run_ml_pipeline(
-            runner, tracker, orchestrator, baseline_plan, train_and_predict,
-            sample_path, output_path, tgt, metric_name, started_at,
+            runner,
+            tracker,
+            orchestrator,
+            baseline_plan,
+            train_and_predict,
+            sample_path,
+            output_path,
+            tgt,
+            metric_name,
+            started_at,
         )
-
-
 if __name__ == "__main__":
     import asyncio
 

@@ -172,3 +172,48 @@ class ExperimentResult(BaseModel):
     error: str | None = None
 
 
+class EnsemblePlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["run_ensemble"]
+    hypothesis: str = Field(min_length=1)
+    models: tuple[str, str, str]
+    reasoning: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_models(self):
+        valid_models = set(
+            ModelConfig.model_fields["name"].annotation.__args__
+        )
+        if len(set(self.models)) != 3:
+            raise ValueError("Models must be unique")
+        for name in self.models:
+            if name not in valid_models:
+                raise ValueError(f"Unknown model: {name}")
+        return self
+
+    def validate_task(self, task_type: str):
+        regression_models = {
+            "cbr", "lnr", "dtr", "rfr",
+            "svr", "lvr", "lbr", "xbr"
+        }
+        classification_models = {
+            "cbc", "dtc", "rfc", "svc",
+            "lvc", "lbc", "xbc"
+        }
+        if task_type == "regression":
+            allowed = regression_models
+        elif task_type in ("binary", "multiclass"):
+            allowed = classification_models
+        else:
+            raise ValueError(f"Unknown task type: {task_type}")
+        invalid = [
+            name for name in self.models
+            if name not in allowed
+        ]
+        if invalid:
+            raise ValueError(
+                f"Models incompatible with {task_type}: {invalid}"
+            )
+
+        return self

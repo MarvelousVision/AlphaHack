@@ -1,9 +1,10 @@
-import numpy as np
+﻿import numpy as np
 import polars as pl
 from pathlib import Path
 from typing import Any
 from itertools import combinations_with_replacement
 from statsmodels.stats.stattools import jarque_bera
+from catboost import CatBoostClassifier, CatBoostRegressor
 
 def prepare_data(
         directory: str,
@@ -11,23 +12,23 @@ def prepare_data(
         test_file: str = "test.csv",
         types_file: str = "data_dictionary.csv",
         alpha: float | int = 0.05,
-        use_interactions: bool = False               #!!!!!!!!!!!!!!!!!!!!!!!!
+        quantity_threshold: int = 100,
+        importance_threshold: float = 0.1
 ) -> Any:
     '''
-    Принимает на вход путь к директории с данными, (на всякий случай) названия файлов с ними и
-    ещё пороговое p-значение для теста Харке-Бера
+    ╨Я╤А╨╕╨╜╨╕╨╝╨░╨╡╤В ╨╜╨░ ╨▓╤Е╨╛╨┤ ╨┐╤Г╤В╤М ╨║ ╨┤╨╕╤А╨╡╨║╤В╨╛╤А╨╕╨╕ ╤Б ╨┤╨░╨╜╨╜╤Л╨╝╨╕, (╨╜╨░ ╨▓╤Б╤П╨║╨╕╨╣ ╤Б╨╗╤Г╤З╨░╨╣) ╨╜╨░╨╖╨▓╨░╨╜╨╕╤П ╤Д╨░╨╣╨╗╨╛╨▓ ╤Б ╨╜╨╕╨╝╨╕ ╨╕
+    ╨╡╤Й╤С ╨┐╨╛╤А╨╛╨│╨╛╨▓╨╛╨╡ p-╨╖╨╜╨░╤З╨╡╨╜╨╕╨╡ ╨┤╨╗╤П ╤В╨╡╤Б╤В╨░ ╨е╨░╤А╨║╨╡-╨С╨╡╤А╨░
 
-    Делит признаки на числовые, бинарные и категориальные (других вроде нет)
+    ╨Ф╨╡╨╗╨╕╤В ╨┐╤А╨╕╨╖╨╜╨░╨║╨╕ ╨╜╨░ ╤З╨╕╤Б╨╗╨╛╨▓╤Л╨╡, ╨▒╨╕╨╜╨░╤А╨╜╤Л╨╡ ╨╕ ╨║╨░╤В╨╡╨│╨╛╤А╨╕╨░╨╗╤М╨╜╤Л╨╡ (╨┤╤А╤Г╨│╨╕╤Е ╨▓╤А╨╛╨┤╨╡ ╨╜╨╡╤В)
 
-    Категориальные признаки заполняет модой
+    ╨Ъ╨░╤В╨╡╨│╨╛╤А╨╕╨░╨╗╤М╨╜╤Л╨╡ ╨┐╤А╨╕╨╖╨╜╨░╨║╨╕ ╨╖╨░╨┐╨╛╨╗╨╜╤П╨╡╤В ╨╝╨╛╨┤╨╛╨╣
 
-    Бинарные признаки заполняет модой в зависимости от категориальных
+    ╨С╨╕╨╜╨░╤А╨╜╤Л╨╡ ╨┐╤А╨╕╨╖╨╜╨░╨║╨╕ ╨╖╨░╨┐╨╛╨╗╨╜╤П╨╡╤В ╨╝╨╛╨┤╨╛╨╣ ╨▓ ╨╖╨░╨▓╨╕╤Б╨╕╨╝╨╛╤Б╤В╨╕ ╨╛╤В ╨║╨░╤В╨╡╨│╨╛╤А╨╕╨░╨╗╤М╨╜╤Л╤Е
 
-    Числовые признаки заполняет средним в зависимости от категориальных и бинарных признаков;
-    проверяет тестом Харке-Бера и логарифмирует, если они рапределены ненормально;
-    добавляет признаки с их взаимодействиями;
-    по логике заполняет пропуски в новых признаках нулями или очень большими числами;
-    и в конце стандартизирует
+    ╨з╨╕╤Б╨╗╨╛╨▓╤Л╨╡ ╨┐╤А╨╕╨╖╨╜╨░╨║╨╕ ╨╖╨░╨┐╨╛╨╗╨╜╤П╨╡╤В ╤Б╤А╨╡╨┤╨╜╨╕╨╝ ╨▓ ╨╖╨░╨▓╨╕╤Б╨╕╨╝╨╛╤Б╤В╨╕ ╨╛╤В ╨║╨░╤В╨╡╨│╨╛╤А╨╕╨░╨╗╤М╨╜╤Л╤Е ╨╕ ╨▒╨╕╨╜╨░╤А╨╜╤Л╤Е ╨┐╤А╨╕╨╖╨╜╨░╨║╨╛╨▓;
+    ╨┐╤А╨╛╨▓╨╡╤А╤П╨╡╤В ╤В╨╡╤Б╤В╨╛╨╝ ╨е╨░╤А╨║╨╡-╨С╨╡╤А╨░ ╨╕ ╨╗╨╛╨│╨░╤А╨╕╤Д╨╝╨╕╤А╤Г╨╡╤В, ╨╡╤Б╨╗╨╕ ╨╛╨╜╨╕ ╤А╨░╨┐╤А╨╡╨┤╨╡╨╗╨╡╨╜╤Л ╨╜╨╡╨╜╨╛╤А╨╝╨░╨╗╤М╨╜╨╛;
+    ╨┤╨╛╨▒╨░╨▓╨╗╤П╨╡╤В ╨┐╤А╨╕╨╖╨╜╨░╨║╨╕ ╤Б ╨╕╤Е ╨▓╨╖╨░╨╕╨╝╨╛╨┤╨╡╨╣╤Б╤В╨▓╨╕╤П╨╝╨╕;
+    ╨┐╨╛ ╨╗╨╛╨│╨╕╨║╨╡ ╨╖╨░╨┐╨╛╨╗╨╜╤П╨╡╤В ╨┐╤А╨╛╨┐╤Г╤Б╨║╨╕ ╨▓ ╨╜╨╛╨▓╤Л╤Е ╨┐╤А╨╕╨╖╨╜╨░╨║╨░╤Е ╨╜╤Г╨╗╤П╨╝╨╕ ╨╕╨╗╨╕ ╨╛╤З╨╡╨╜╤М ╨▒╨╛╨╗╤М╤И╨╕╨╝╨╕ ╤З╨╕╤Б╨╗╨░╨╝╨╕
     '''
     directory = Path(directory)
 
@@ -144,8 +145,8 @@ def prepare_data(
                 train_data = train_data.with_columns(pl.col(c).fill_null(fallback))
                 test_data = test_data.with_columns(pl.col(c).fill_null(fallback))
 
-    train_blocks = []
-    test_blocks = []
+    numeric_count = len(numeric)
+    limit = 1e12
 
     if numeric:
         x_train = train_data.select(numeric).to_numpy().copy()
@@ -153,79 +154,149 @@ def prepare_data(
 
         for j, c in enumerate(numeric):
             if c in log_columns:
-                x_train[:, j] = np.sign(x_train[:, j]) * np.log1p(np.abs(x_train[:, j]))
-                x_test[:, j] = np.sign(x_test[:, j]) * np.log1p(np.abs(x_test[:, j]))
+                x_train[:, j] = (
+                        np.sign(x_train[:, j])
+                        * np.log1p(np.abs(x_train[:, j]))
+                )
+                x_test[:, j] = (
+                        np.sign(x_test[:, j])
+                        * np.log1p(np.abs(x_test[:, j]))
+                )
 
-        limit = 1e12
         x_train = np.clip(
-            np.nan_to_num(x_train, nan=0.0, posinf=limit, neginf=-limit),
-            -limit, limit,
+            np.nan_to_num(
+                x_train, nan=0.0, posinf=limit, neginf=-limit
+            ),
+            -limit, limit
         )
         x_test = np.clip(
-            np.nan_to_num(x_test, nan=0.0, posinf=limit, neginf=-limit),
-            -limit, limit,
+            np.nan_to_num(
+                x_test, nan=0.0, posinf=limit, neginf=-limit
+            ),
+            -limit, limit
         )
 
-        train_features = [x_train]
-        test_features = [x_test]
-        if use_interactions:
-            pairs = list(combinations_with_replacement(range(len(numeric)), 2))
-
-            train_interactions = np.column_stack([
-                x_train[:, i] * x_train[:, j] for i, j in pairs
-            ])
-            test_interactions = np.column_stack([
-                x_test[:, i] * x_test[:, j] for i, j in pairs
-            ])
-
-            train_interactions = np.clip(
-                np.nan_to_num(
-                    train_interactions, nan=0.0, posinf=limit, neginf=-limit
-                ),
-                -limit, limit,
-            )
-            test_interactions = np.clip(
-                np.nan_to_num(
-                    test_interactions, nan=0.0, posinf=limit, neginf=-limit
-                ),
-                -limit, limit
-            )
-
-            train_features.append(train_interactions)
-            test_features.append(test_interactions)
-            numeric.extend(
-                f"interaction__{i}__{j}"
-                for i, j in pairs
+        train_data = train_data.with_columns(
+            pl.DataFrame(x_train, schema=numeric, orient="row")
+        )
+        test_data = test_data.with_columns(
+            pl.DataFrame(x_test, schema=numeric, orient="row")
         )
 
-        x_train = np.column_stack(train_features)
-        x_test = np.column_stack(test_features)
-
-        train_blocks.append(pl.DataFrame(x_train, schema=numeric, orient="row"))
-        test_blocks.append(pl.DataFrame(x_test, schema=numeric, orient="row"))
-
-    categorical_train = pl.concat(
-        [train_data.select(category + binary), missing_train],
-        how="horizontal",
-    ) if category or binary else missing_train
-
-    categorical_test = pl.concat(
-        [test_data.select(category + binary), missing_test],
-        how="horizontal",
-    ) if category or binary else missing_test
-
-    cat = categorical_train.columns
-    train_blocks.append(
-        pl.DataFrame(categorical_train, schema=cat, orient="row")
+    # ╨Ш╨╜╨┤╨╕╨║╨░╤В╨╛╤А╤Л ╨┐╤А╨╛╨┐╤Г╤Б╨║╨╛╨▓ ╤В╨╛╨╢╨╡ ╤Г╤З╨░╤Б╤В╨▓╤Г╤О╤В ╨▓ ╨╛╤В╨▒╨╛╤А╨╡.
+    train_data = pl.concat(
+        [train_data, missing_train],
+        how="horizontal"
     )
-    test_blocks.append(
-        pl.DataFrame(categorical_test, schema=cat, orient="row")
+    test_data = pl.concat(
+        [test_data, missing_test],
+        how="horizontal"
     )
+
+    cat = category + binary + missing_train.columns
+
+    def select_features(train, test, numeric, cat):
+        target = y_col.to_series().to_numpy().ravel()
+
+        if task == "regression":
+            target = target.astype(float)
+
+            model = CatBoostRegressor(
+                iterations=300,
+                depth=6,
+                random_seed=42,
+                verbose=False,
+                allow_writing_files=False
+            )
+        else:
+            model = CatBoostClassifier(
+                iterations=300,
+                depth=6,
+                random_seed=42,
+                verbose=False,
+                allow_writing_files=False
+            )
+
+        model.fit(
+            train.to_pandas(),
+            target,
+            cat_features=cat
+        )
+
+        importance = model.get_feature_importance(
+            type="PredictionValuesChange"
+        )
+
+        selected = [
+            column
+            for column, value in zip(train.columns, importance)
+            if value > importance_threshold
+        ]
+
+        if not selected:
+            raise ValueError(
+                "╨Я╨╛╤Б╨╗╨╡ ╨╛╤В╨▒╨╛╤А╨░ ╨╜╨╡ ╨╛╤Б╤В╨░╨╗╨╛╤Б╤М ╨┐╤А╨╕╨╖╨╜╨░╨║╨╛╨▓. "
+                "╨г╨╝╨╡╨╜╤М╤И╨╕╤В╨╡ importance_threshold."
+            )
+
+        numeric = [c for c in numeric if c in selected]
+        cat = [c for c in cat if c in selected]
+
+        return (
+            train.select(selected),
+            test.select(selected),
+            numeric,
+            cat
+        )
+
+    def add_interactions(train, test, numeric):
+        expressions = []
+        names = []
+
+        for i, j in combinations_with_replacement(
+                range(len(numeric)), 2
+        ):
+            name = f"interaction__{i}__{j}"
+
+            if name in train.columns:
+                raise ValueError(
+                    f"╨Ш╨╝╤П ╨╜╨╛╨▓╨╛╨│╨╛ ╨┐╤А╨╕╨╖╨╜╨░╨║╨░ ╤Г╨╢╨╡ ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╤В╤Б╤П: {name}"
+                )
+
+            expressions.append(
+                (
+                        pl.col(numeric[i]) * pl.col(numeric[j])
+                )
+                .clip(-limit, limit)
+                .alias(name)
+            )
+            names.append(name)
+
+        if expressions:
+            train = train.with_columns(expressions)
+            test = test.with_columns(expressions)
+
+        return train, test, numeric + names
+
+    if numeric_count < quantity_threshold:
+        train_data, test_data, numeric = add_interactions(
+            train_data, test_data, numeric
+        )
+        train_data, test_data, numeric, cat = select_features(
+            train_data, test_data, numeric, cat
+        )
+    else:
+        train_data, test_data, numeric, cat = select_features(
+            train_data, test_data, numeric, cat
+        )
+        train_data, test_data, numeric = add_interactions(
+            train_data, test_data, numeric
+        )
 
     return (
-        pl.concat(train_blocks, how="horizontal"),
+        train_data,
         y_col,
-        pl.concat(test_blocks, how="horizontal"),
+        test_data,
         numeric,
         cat,
         task,
