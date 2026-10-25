@@ -93,274 +93,6 @@ solution.py
 <files>
 This section contains the contents of the repository's files.
 
-<file path="eclose()">
-[33mcommit 0cdb03018b40468a00777335bdea871e5f14dee3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mllm_agent[m[33m)[m
-Merge: 4e05539 f613ca4
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Sat Oct 24 22:35:14 2026 +0300
-
-    Merge feature/ml-logic
-
-[33mcommit f613ca436ae647c9ff6e090c1a7157963e34373d[m[33m ([m[1;31morigin/feature/ml-logic[m[33m, [m[1;32mfeature/ml-logic[m[33m)[m
-Merge: 79295e4 081b5e4
-Author: Vika <viktoria4949@gmail.com>
-Date:   Sat Oct 24 21:27:39 2026 +0300
-
-    готово
-
-[33mcommit 081b5e49b482c0c9b20574f657915a5be292f785[m
-Author: user <jaricardintsev@gmail.com>
-Date:   Sat Oct 24 20:11:07 2026 +0300
-
-    New architecture - new models!
-
-[33mcommit cbf185bfd500c0523758533cb49e38fde164d5c4[m
-Author: user <jaricardintsev@gmail.com>
-Date:   Sat Oct 24 20:09:04 2026 +0300
-
-    New architecture - new models!
-
-[33mcommit 725c215b3eb075192f56a23f199f32881d4e8b82[m
-Author: user <jaricardintsev@gmail.com>
-Date:   Sat Oct 24 20:03:47 2026 +0300
-
-    New architecture - new models!
-
-[33mcommit 79295e4fc1631a430639a2e77d0e168dbd584784[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Sat Oct 24 17:49:17 2026 +0300
-
-    фикс время
-
-[33mcommit e79d7316601699707d5440929dc37010497f0044[m
-Author: user <jaricardintsev@gmail.com>
-Date:   Sat Oct 24 00:04:09 2026 +0300
-
-    add flexible preproc
-
-[33mcommit 224d2bf1c2a007185f630bcbf33220a36927237d[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Fri Oct 23 23:23:19 2026 +0300
-
-    пути
-
-[33mcommit 1384038b840fc03a4dec3024cb3b8bf66684b48c[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Fri Oct 23 18:07:50 2026 +0300
-
-    версия 2 с use_interactions = False
-
-[33mcommit 4e0553917f4abeee3b50a25f12844a1f1ea7ccf5[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 17:46:37 2026 +0300
-
-    правки
-
-[33mcommit fae8709fcd9163e9b96a620538b36ea07600d10e[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 17:04:59 2026 +0300
-
-    fix
-
-[33mcommit d06890151147ebd633491519d81421e7af46a868[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 16:55:34 2026 +0300
-
-    _check_bounds update
-
-[33mcommit cf733d33c731536a54cf7ce0c3039eb95b7c9372[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Fri Oct 23 16:52:06 2026 +0300
-
-    поправки
-
-[33mcommit d8309a0d3dab61d744f36c0c1614d5a875d9eeb2[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 16:46:08 2026 +0300
-
-    _check_bounds validate
-
-[33mcommit bc5cbe94122a40121d945891828bfda9f0c43ea1[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 16:36:38 2026 +0300
-
-    234
-
-[33mcommit ae955714c64debbd1ed43cb5f082ee27055a60df[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 16:22:58 2026 +0300
-
-    123
-
-[33mcommit 710c469b6d9fcfafcc43165491d6e7dee9c5cc2c[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 15:15:25 2026 +0300
-
-    дуюликаты; список моделей; n_rows
-
-[33mcommit c95f7d12bd4d56fab39d01a0ab95ec453e2d901a[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 13:52:42 2026 +0300
-
-    feat(agent): add new models, exploration strategy and smart fallback
-
-[33mcommit ac4bf837fc7548e5ff7b2c1eb4902989e093fced[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Fri Oct 23 12:40:16 2026 +0300
-
-    улучшила управление временем экспериментов
-
-[33mcommit cd650b740e6708ecc6e215ec331dc11050fd802f[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Fri Oct 23 12:25:52 2026 +0300
-
-    add use_interactions flag
-
-[33mcommit 0e5b6fb896aec12762eb0648ec3898887a0b5e10[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Fri Oct 23 00:02:15 2026 +0300
-
-    пофиксила время
-
-[33mcommit ff20f50cc2b9fa5e0724dd0f73d67230c608117d[m
-Author: YaroslavArdintsev <jaricardintsev@gmail.com>
-Date:   Thu Oct 22 22:27:38 2026 +0300
-
-    Больше моделей, хороших и разных!
-
-[33mcommit dd549b25a4a66c20bb6cc8633bd71870f48fe6fa[m
-Merge: 5ad8017 34b73ac
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Thu Oct 22 21:41:38 2026 +0300
-
-    Merge remote-tracking branch 'origin/feature/ml-logic' into llm_agent
-
-[33mcommit 5ad8017d7d695417e012ae0d63bc1a0ccbebf0f3[m
-Merge: b3a6211 65dc233
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Thu Oct 22 21:40:53 2026 +0300
-
-    Merge remote-tracking branch 'origin/data_tools' into llm_agent
-
-[33mcommit b3a62115434b0d2b1a028d5a8fbf1359e146e414[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Thu Oct 22 21:24:44 2026 +0300
-
-    разрешил конфликты
-
-[33mcommit 65dc23323814d0313bf198ac7d192469de0582ff[m
-Author: YaroslavArdintsev <jaricardintsev@gmail.com>
-Date:   Thu Oct 22 19:19:26 2026 +0300
-
-    Больше моделей, хороших и разных!
-
-[33mcommit 34b73ac0a7d02572774f162a8a4d137a314d49b7[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Thu Oct 22 18:36:24 2026 +0300
-
-    о боже работает
-
-[33mcommit 69460e5016998fb317e2f0798105a30e7c375b7f[m
-Merge: 697352a 5a79ca3
-Author: Torosian_Sergei <467744@niuitmo.ru>
-Date:   Thu Oct 22 13:19:51 2026 +0300
-
-    Merge remote-tracking branch 'origin/feature/ml-logic' into llm_agent
-
-[33mcommit 697352aaaac51d94e82d432ff1e49f605ca81d48[m
-Merge: b23308e bc7b79a
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Thu Oct 22 12:53:43 2026 +0300
-
-    Merge remote-tracking branch 'origin/data_tools' into llm_agent
-
-[33mcommit df1fbb1a6c3b6c6d9cd4c1abb8628e05cabe5f44[m
-Author: YaroslavArdintsev <jaricardintsev@gmail.com>
-Date:   Thu Oct 22 08:00:40 2026 +0300
-
-    Больше моделей, хороших и разных!
-
-[33mcommit 5a79ca3669277c200fb33bcb873f278623b7907f[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Thu Oct 22 00:45:55 2026 +0300
-
-    зип готов
-
-[33mcommit cff9de2e051fbde15a2ee2590d639a9573ba2506[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Thu Oct 22 00:21:15 2026 +0300
-
-    первая версия готова
-
-[33mcommit b23308eddb8420b52d141a683eae8235a84dc69b[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Wed Oct 21 23:31:43 2026 +0300
-
-    delete _preprocessing from prompt and fallback
-
-[33mcommit ff48183a81d1ae8e8d03bb8e5b53c9ccdb1c4f8e[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Wed Oct 21 22:54:01 2026 +0300
-
-    наконец работает
-
-[33mcommit 4af37d89ec3637264a0559ba8a1f9a30f1928b85[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Wed Oct 21 17:58:29 2026 +0300
-
-    fix: validate fallback via ExperimentPlan
-
-[33mcommit 64b8fc6f25731c7442f738e676d1e02b0f62b00b[m
-Author: Сергей <bacteriofa20@gmail.com>
-Date:   Wed Oct 21 17:33:42 2026 +0300
-
-    обновил интерфейс purpose и system prompt
-
-[33mcommit 8f2294549df5037cebb6e9ce5cce305935c10a41[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Wed Oct 21 17:24:51 2026 +0300
-
-    пока недоделанная версия
-
-[33mcommit bc7b79ae2e3f051ec5cfcc73982b04eaa305cc9d[m
-Author: YaroslavArdintsev <jaricardintsev@gmail.com>
-Date:   Wed Oct 21 17:24:46 2026 +0300
-
-    Наноправка
-
-[33mcommit 9451b19328e407ac2ef98abc5714f8e55df790ab[m
-Author: YaroslavArdintsev <jaricardintsev@gmail.com>
-Date:   Wed Oct 21 16:25:57 2026 +0300
-
-    Микроправки
-
-[33mcommit 03d9d1599fa10ee56ee7eca363f9eba5ce21ca29[m
-Author: YaroslavArdintsev <jaricardintsev@gmail.com>
-Date:   Wed Oct 21 14:48:15 2026 +0300
-
-    Радикальные поменяшки всего
-
-[33mcommit 03a8502a4d0ce9ebb8ed5067233758403fa3be85[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Wed Oct 21 14:05:42 2026 +0300
-
-    Complete ML pipeline integration tests
-
-[33mcommit 010bc245c801e7173fe8b44df02ae1cbff0311c2[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Wed Oct 21 13:56:30 2026 +0300
-
-    исправила ошибки с временем в run
-
-[33mcommit 8166b044f62391916c46ca941f31eca81effff7c[m
-Author: Vika <viktoria4949@gmail.com>
-Date:   Wed Oct 21 13:44:44 2026 +0300
-
-    пофиксила время чтобы с baceline учитывал
-
-[33mcommit c9f2ba55b31133c2fd12b70cf824abce3c7d8
-</file>
-
 <file path="catboost_info/catboost_training.json">
 {
 "meta":{"test_sets":[],"test_metrics":[],"learn_metrics":[{"best_value":"Min","name":"RMSE"}],"launch_mode":"Train","parameters":"","iteration_count":1200,"learn_sets":["learn"],"name":"experiment"},
@@ -68470,6 +68202,274 @@ if __name__ == "__main__":
     main()
 </file>
 
+<file path="eclose()">
+[33mcommit 0cdb03018b40468a00777335bdea871e5f14dee3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mllm_agent[m[33m)[m
+Merge: 4e05539 f613ca4
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Sat Oct 24 22:35:14 2026 +0300
+
+    Merge feature/ml-logic
+
+[33mcommit f613ca436ae647c9ff6e090c1a7157963e34373d[m[33m ([m[1;31morigin/feature/ml-logic[m[33m, [m[1;32mfeature/ml-logic[m[33m)[m
+Merge: 79295e4 081b5e4
+Author: Vika <viktoria4949@gmail.com>
+Date:   Sat Oct 24 21:27:39 2026 +0300
+
+    готово
+
+[33mcommit 081b5e49b482c0c9b20574f657915a5be292f785[m
+Author: user <jaricardintsev@gmail.com>
+Date:   Sat Oct 24 20:11:07 2026 +0300
+
+    New architecture - new models!
+
+[33mcommit cbf185bfd500c0523758533cb49e38fde164d5c4[m
+Author: user <jaricardintsev@gmail.com>
+Date:   Sat Oct 24 20:09:04 2026 +0300
+
+    New architecture - new models!
+
+[33mcommit 725c215b3eb075192f56a23f199f32881d4e8b82[m
+Author: user <jaricardintsev@gmail.com>
+Date:   Sat Oct 24 20:03:47 2026 +0300
+
+    New architecture - new models!
+
+[33mcommit 79295e4fc1631a430639a2e77d0e168dbd584784[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Sat Oct 24 17:49:17 2026 +0300
+
+    фикс время
+
+[33mcommit e79d7316601699707d5440929dc37010497f0044[m
+Author: user <jaricardintsev@gmail.com>
+Date:   Sat Oct 24 00:04:09 2026 +0300
+
+    add flexible preproc
+
+[33mcommit 224d2bf1c2a007185f630bcbf33220a36927237d[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Fri Oct 23 23:23:19 2026 +0300
+
+    пути
+
+[33mcommit 1384038b840fc03a4dec3024cb3b8bf66684b48c[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Fri Oct 23 18:07:50 2026 +0300
+
+    версия 2 с use_interactions = False
+
+[33mcommit 4e0553917f4abeee3b50a25f12844a1f1ea7ccf5[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 17:46:37 2026 +0300
+
+    правки
+
+[33mcommit fae8709fcd9163e9b96a620538b36ea07600d10e[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 17:04:59 2026 +0300
+
+    fix
+
+[33mcommit d06890151147ebd633491519d81421e7af46a868[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 16:55:34 2026 +0300
+
+    _check_bounds update
+
+[33mcommit cf733d33c731536a54cf7ce0c3039eb95b7c9372[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Fri Oct 23 16:52:06 2026 +0300
+
+    поправки
+
+[33mcommit d8309a0d3dab61d744f36c0c1614d5a875d9eeb2[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 16:46:08 2026 +0300
+
+    _check_bounds validate
+
+[33mcommit bc5cbe94122a40121d945891828bfda9f0c43ea1[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 16:36:38 2026 +0300
+
+    234
+
+[33mcommit ae955714c64debbd1ed43cb5f082ee27055a60df[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 16:22:58 2026 +0300
+
+    123
+
+[33mcommit 710c469b6d9fcfafcc43165491d6e7dee9c5cc2c[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 15:15:25 2026 +0300
+
+    дуюликаты; список моделей; n_rows
+
+[33mcommit c95f7d12bd4d56fab39d01a0ab95ec453e2d901a[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 13:52:42 2026 +0300
+
+    feat(agent): add new models, exploration strategy and smart fallback
+
+[33mcommit ac4bf837fc7548e5ff7b2c1eb4902989e093fced[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Fri Oct 23 12:40:16 2026 +0300
+
+    улучшила управление временем экспериментов
+
+[33mcommit cd650b740e6708ecc6e215ec331dc11050fd802f[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Fri Oct 23 12:25:52 2026 +0300
+
+    add use_interactions flag
+
+[33mcommit 0e5b6fb896aec12762eb0648ec3898887a0b5e10[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Fri Oct 23 00:02:15 2026 +0300
+
+    пофиксила время
+
+[33mcommit ff20f50cc2b9fa5e0724dd0f73d67230c608117d[m
+Author: YaroslavArdintsev <jaricardintsev@gmail.com>
+Date:   Thu Oct 22 22:27:38 2026 +0300
+
+    Больше моделей, хороших и разных!
+
+[33mcommit dd549b25a4a66c20bb6cc8633bd71870f48fe6fa[m
+Merge: 5ad8017 34b73ac
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Thu Oct 22 21:41:38 2026 +0300
+
+    Merge remote-tracking branch 'origin/feature/ml-logic' into llm_agent
+
+[33mcommit 5ad8017d7d695417e012ae0d63bc1a0ccbebf0f3[m
+Merge: b3a6211 65dc233
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Thu Oct 22 21:40:53 2026 +0300
+
+    Merge remote-tracking branch 'origin/data_tools' into llm_agent
+
+[33mcommit b3a62115434b0d2b1a028d5a8fbf1359e146e414[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Thu Oct 22 21:24:44 2026 +0300
+
+    разрешил конфликты
+
+[33mcommit 65dc23323814d0313bf198ac7d192469de0582ff[m
+Author: YaroslavArdintsev <jaricardintsev@gmail.com>
+Date:   Thu Oct 22 19:19:26 2026 +0300
+
+    Больше моделей, хороших и разных!
+
+[33mcommit 34b73ac0a7d02572774f162a8a4d137a314d49b7[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Thu Oct 22 18:36:24 2026 +0300
+
+    о боже работает
+
+[33mcommit 69460e5016998fb317e2f0798105a30e7c375b7f[m
+Merge: 697352a 5a79ca3
+Author: Torosian_Sergei <467744@niuitmo.ru>
+Date:   Thu Oct 22 13:19:51 2026 +0300
+
+    Merge remote-tracking branch 'origin/feature/ml-logic' into llm_agent
+
+[33mcommit 697352aaaac51d94e82d432ff1e49f605ca81d48[m
+Merge: b23308e bc7b79a
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Thu Oct 22 12:53:43 2026 +0300
+
+    Merge remote-tracking branch 'origin/data_tools' into llm_agent
+
+[33mcommit df1fbb1a6c3b6c6d9cd4c1abb8628e05cabe5f44[m
+Author: YaroslavArdintsev <jaricardintsev@gmail.com>
+Date:   Thu Oct 22 08:00:40 2026 +0300
+
+    Больше моделей, хороших и разных!
+
+[33mcommit 5a79ca3669277c200fb33bcb873f278623b7907f[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Thu Oct 22 00:45:55 2026 +0300
+
+    зип готов
+
+[33mcommit cff9de2e051fbde15a2ee2590d639a9573ba2506[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Thu Oct 22 00:21:15 2026 +0300
+
+    первая версия готова
+
+[33mcommit b23308eddb8420b52d141a683eae8235a84dc69b[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Wed Oct 21 23:31:43 2026 +0300
+
+    delete _preprocessing from prompt and fallback
+
+[33mcommit ff48183a81d1ae8e8d03bb8e5b53c9ccdb1c4f8e[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Wed Oct 21 22:54:01 2026 +0300
+
+    наконец работает
+
+[33mcommit 4af37d89ec3637264a0559ba8a1f9a30f1928b85[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Wed Oct 21 17:58:29 2026 +0300
+
+    fix: validate fallback via ExperimentPlan
+
+[33mcommit 64b8fc6f25731c7442f738e676d1e02b0f62b00b[m
+Author: Сергей <bacteriofa20@gmail.com>
+Date:   Wed Oct 21 17:33:42 2026 +0300
+
+    обновил интерфейс purpose и system prompt
+
+[33mcommit 8f2294549df5037cebb6e9ce5cce305935c10a41[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Wed Oct 21 17:24:51 2026 +0300
+
+    пока недоделанная версия
+
+[33mcommit bc7b79ae2e3f051ec5cfcc73982b04eaa305cc9d[m
+Author: YaroslavArdintsev <jaricardintsev@gmail.com>
+Date:   Wed Oct 21 17:24:46 2026 +0300
+
+    Наноправка
+
+[33mcommit 9451b19328e407ac2ef98abc5714f8e55df790ab[m
+Author: YaroslavArdintsev <jaricardintsev@gmail.com>
+Date:   Wed Oct 21 16:25:57 2026 +0300
+
+    Микроправки
+
+[33mcommit 03d9d1599fa10ee56ee7eca363f9eba5ce21ca29[m
+Author: YaroslavArdintsev <jaricardintsev@gmail.com>
+Date:   Wed Oct 21 14:48:15 2026 +0300
+
+    Радикальные поменяшки всего
+
+[33mcommit 03a8502a4d0ce9ebb8ed5067233758403fa3be85[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Wed Oct 21 14:05:42 2026 +0300
+
+    Complete ML pipeline integration tests
+
+[33mcommit 010bc245c801e7173fe8b44df02ae1cbff0311c2[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Wed Oct 21 13:56:30 2026 +0300
+
+    исправила ошибки с временем в run
+
+[33mcommit 8166b044f62391916c46ca941f31eca81effff7c[m
+Author: Vika <viktoria4949@gmail.com>
+Date:   Wed Oct 21 13:44:44 2026 +0300
+
+    пофиксила время чтобы с baceline учитывал
+
+[33mcommit c9f2ba55b31133c2fd12b70cf824abce3c7d8
+</file>
+
 <file path="experiments.json">
 {}
 </file>
@@ -68961,6 +68961,231 @@ class ExperimentTracker:
         return max(durations) if durations else None
 </file>
 
+<file path="core/schemas.py">
+from typing import Any, Literal
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+
+PARAM_RANGES = {
+    "dtr": {"max_depth": (3, 30), "min_samples_leaf": (1, 20)},
+    "dtc": {"max_depth": (3, 30), "min_samples_leaf": (1, 20)},
+
+    "rfr": {
+        "n_estimators": (100, 500),
+        "max_depth": (5, 30),
+        "min_samples_leaf": (1, 10),
+    },
+    "rfc": {
+        "n_estimators": (100, 500),
+        "max_depth": (5, 30),
+        "min_samples_leaf": (1, 10),
+    },
+
+    "svr": {"C": (0.01, 100), "epsilon": (0.01, 1)},
+    "svc": {"C": (0.01, 100)},
+
+    "lvr": {"C": (0.01, 100), "epsilon": (0, 0.5)},
+    "lvc": {"C": (0.01, 100)},
+
+    "lbr": {
+        "num_leaves": (15, 127),
+        "max_depth": (3, 12),
+        "learning_rate": (0.01, 0.2),
+        "n_estimators": (200, 1500),
+        "min_child_samples": (10, 100),
+        "reg_lambda": (0, 10),
+    },
+    "lbc": {
+        "num_leaves": (15, 127),
+        "max_depth": (3, 12),
+        "learning_rate": (0.01, 0.2),
+        "n_estimators": (200, 1500),
+        "min_child_samples": (10, 100),
+        "reg_lambda": (0, 10),
+    },
+
+    "xbr": {
+        "max_depth": (3, 10),
+        "learning_rate": (0.01, 0.2),
+        "n_estimators": (200, 1200),
+        "subsample": (0.6, 1.0),
+        "colsample_bytree": (0.6, 1.0),
+        "reg_lambda": (0, 10),
+    },
+    "xbc": {
+        "max_depth": (3, 10),
+        "learning_rate": (0.01, 0.2),
+        "n_estimators": (200, 1200),
+        "subsample": (0.6, 1.0),
+        "colsample_bytree": (0.6, 1.0),
+        "reg_lambda": (0, 10),
+    },
+    "cbr": {
+        "iterations": (100, 2000),
+        "depth": (2, 10),
+        "learning_rate": (0.01, 0.3),
+        "l2_leaf_reg": (1, 20),
+        "random_seed": (0, 2147483647),
+    },
+    "cbc": {
+        "iterations": (100, 2000),
+        "depth": (2, 10),
+        "learning_rate": (0.01, 0.3),
+        "l2_leaf_reg": (1, 20),
+        "random_seed": (0, 2147483647),
+    },
+}
+
+INT_PARAMS = {
+    "max_depth", "min_samples_leaf", "n_estimators",
+    "num_leaves", "min_child_samples",
+    "iterations", "depth", "random_seed",
+}
+class ModelConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Literal[
+    "cbr", "cbc", "lnr",
+    "dtr", "dtc",
+    "rfr", "rfc",
+    "svr", "svc",
+    "lvr", "lvc",
+    "lbr", "lbc",
+    "xbr", "xbc"
+    ]
+    hyperparameters: dict[str, Any] = Field(default_factory=dict)
+    @model_validator(mode="after")
+    def validate_hyperparameters(self):
+        params = self.hyperparameters
+        allowed = PARAM_RANGES.get(self.name, {})
+       
+        for key, value in params.items():
+            if self.name in ("svc", "svr") and key == "gamma":
+                if value not in ("scale", "auto"):
+                    raise ValueError("gamma must be scale or auto")
+                continue
+            if self.name in ("cbr", "cbc") and key == "verbose":
+                if type(value) is not bool:
+                    raise ValueError("verbose must be boolean")
+                continue
+            if key not in allowed:
+                raise ValueError(
+                    f"{key} is not allowed for {self.name}"
+                )
+
+            if value is None and key == "max_depth" and self.name in ("rfr", "rfc"):
+                continue
+
+            low, high = allowed[key]
+
+            if key in INT_PARAMS:
+                if type(value) is not int:
+                    raise ValueError(f"{key} must be an integer")
+            elif type(value) not in (int, float):
+                raise ValueError(f"{key} must be numeric")
+
+            if not low <= value <= high:
+                raise ValueError(
+                    f"{key} must be between {low} and {high}"
+                )
+
+        return self
+
+class PreprocessingConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    missing_values: Literal["native", "median", "mean", "most_frequent"]
+    categorical_encoding: Literal[ "native", "onehot", "ordinal"]
+    scaling: Literal["none", "standard", "robust"]
+
+
+class FeatureConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    strategy: Literal["baseline"] = "baseline"
+    drop_columns: list[str] = Field(default_factory=list)
+
+
+class ExperimentPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["run_experiment"]
+    hypothesis: str = Field(min_length=1)
+
+    model: ModelConfig
+    features: FeatureConfig
+
+    reasoning: str = Field(min_length=1)
+    estimated_time_sec: int = Field(gt=0, le=10800)
+
+class MetricResult(BaseModel):
+    name: str
+    value: float
+    direction: Literal["maximize", "minimize"]
+
+
+class ExperimentResult(BaseModel):
+    experiment_id: str
+    status: Literal["success", "failed"]
+    model_name: str
+
+    metric: MetricResult | None = None
+    cv_std: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    duration_sec: float = Field(ge=0)
+    error: str | None = None
+
+
+class EnsemblePlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["run_ensemble"]
+    hypothesis: str = Field(min_length=1)
+    models: tuple[str, str, str]
+    reasoning: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_models(self):
+        valid_models = set(
+            ModelConfig.model_fields["name"].annotation.__args__
+        )
+        if len(set(self.models)) != 3:
+            raise ValueError("Models must be unique")
+        for name in self.models:
+            if name not in valid_models:
+                raise ValueError(f"Unknown model: {name}")
+        return self
+
+    def validate_task(self, task_type: str):
+        regression_models = {
+            "cbr", "lnr", "dtr", "rfr",
+            "svr", "lvr", "lbr", "xbr"
+        }
+        classification_models = {
+            "cbc", "dtc", "rfc", "svc",
+            "lvc", "lbc", "xbc"
+        }
+        if task_type == "regression":
+            allowed = regression_models
+        elif task_type in ("binary", "multiclass"):
+            allowed = classification_models
+        else:
+            raise ValueError(f"Unknown task type: {task_type}")
+        invalid = [
+            name for name in self.models
+            if name not in allowed
+        ]
+        if invalid:
+            raise ValueError(
+                f"Models incompatible with {task_type}: {invalid}"
+            )
+
+        return self
+</file>
+
+<file path="data_tools/__init__.py">
+
+</file>
+
 <file path="data_tools/models2.py">
 import optuna
 import numpy as np
@@ -69201,231 +69426,6 @@ def choir(m1: str,
         id_name: test_ids,
         tgt: result,
     })
-</file>
-
-<file path="core/schemas.py">
-from typing import Any, Literal
-from pydantic import BaseModel, Field, ConfigDict
-from pydantic import BaseModel, Field, ConfigDict, model_validator
-
-PARAM_RANGES = {
-    "dtr": {"max_depth": (3, 30), "min_samples_leaf": (1, 20)},
-    "dtc": {"max_depth": (3, 30), "min_samples_leaf": (1, 20)},
-
-    "rfr": {
-        "n_estimators": (100, 500),
-        "max_depth": (5, 30),
-        "min_samples_leaf": (1, 10),
-    },
-    "rfc": {
-        "n_estimators": (100, 500),
-        "max_depth": (5, 30),
-        "min_samples_leaf": (1, 10),
-    },
-
-    "svr": {"C": (0.01, 100), "epsilon": (0.01, 1)},
-    "svc": {"C": (0.01, 100)},
-
-    "lvr": {"C": (0.01, 100), "epsilon": (0, 0.5)},
-    "lvc": {"C": (0.01, 100)},
-
-    "lbr": {
-        "num_leaves": (15, 127),
-        "max_depth": (3, 12),
-        "learning_rate": (0.01, 0.2),
-        "n_estimators": (200, 1500),
-        "min_child_samples": (10, 100),
-        "reg_lambda": (0, 10),
-    },
-    "lbc": {
-        "num_leaves": (15, 127),
-        "max_depth": (3, 12),
-        "learning_rate": (0.01, 0.2),
-        "n_estimators": (200, 1500),
-        "min_child_samples": (10, 100),
-        "reg_lambda": (0, 10),
-    },
-
-    "xbr": {
-        "max_depth": (3, 10),
-        "learning_rate": (0.01, 0.2),
-        "n_estimators": (200, 1200),
-        "subsample": (0.6, 1.0),
-        "colsample_bytree": (0.6, 1.0),
-        "reg_lambda": (0, 10),
-    },
-    "xbc": {
-        "max_depth": (3, 10),
-        "learning_rate": (0.01, 0.2),
-        "n_estimators": (200, 1200),
-        "subsample": (0.6, 1.0),
-        "colsample_bytree": (0.6, 1.0),
-        "reg_lambda": (0, 10),
-    },
-    "cbr": {
-        "iterations": (100, 2000),
-        "depth": (2, 10),
-        "learning_rate": (0.01, 0.3),
-        "l2_leaf_reg": (1, 20),
-        "random_seed": (0, 2147483647),
-    },
-    "cbc": {
-        "iterations": (100, 2000),
-        "depth": (2, 10),
-        "learning_rate": (0.01, 0.3),
-        "l2_leaf_reg": (1, 20),
-        "random_seed": (0, 2147483647),
-    },
-}
-
-INT_PARAMS = {
-    "max_depth", "min_samples_leaf", "n_estimators",
-    "num_leaves", "min_child_samples",
-    "iterations", "depth", "random_seed",
-}
-class ModelConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: Literal[
-    "cbr", "cbc", "lnr",
-    "dtr", "dtc",
-    "rfr", "rfc",
-    "svr", "svc",
-    "lvr", "lvc",
-    "lbr", "lbc",
-    "xbr", "xbc"
-    ]
-    hyperparameters: dict[str, Any] = Field(default_factory=dict)
-    @model_validator(mode="after")
-    def validate_hyperparameters(self):
-        params = self.hyperparameters
-        allowed = PARAM_RANGES.get(self.name, {})
-       
-        for key, value in params.items():
-            if self.name in ("svc", "svr") and key == "gamma":
-                if value not in ("scale", "auto"):
-                    raise ValueError("gamma must be scale or auto")
-                continue
-            if self.name in ("cbr", "cbc") and key == "verbose":
-                if type(value) is not bool:
-                    raise ValueError("verbose must be boolean")
-                continue
-            if key not in allowed:
-                raise ValueError(
-                    f"{key} is not allowed for {self.name}"
-                )
-
-            if value is None and key == "max_depth" and self.name in ("rfr", "rfc"):
-                continue
-
-            low, high = allowed[key]
-
-            if key in INT_PARAMS:
-                if type(value) is not int:
-                    raise ValueError(f"{key} must be an integer")
-            elif type(value) not in (int, float):
-                raise ValueError(f"{key} must be numeric")
-
-            if not low <= value <= high:
-                raise ValueError(
-                    f"{key} must be between {low} and {high}"
-                )
-
-        return self
-
-class PreprocessingConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    missing_values: Literal["native", "median", "mean", "most_frequent"]
-    categorical_encoding: Literal[ "native", "onehot", "ordinal"]
-    scaling: Literal["none", "standard", "robust"]
-
-
-class FeatureConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    strategy: Literal["baseline"] = "baseline"
-    drop_columns: list[str] = Field(default_factory=list)
-
-
-class ExperimentPlan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    action: Literal["run_experiment"]
-    hypothesis: str = Field(min_length=1)
-
-    model: ModelConfig
-    features: FeatureConfig
-
-    reasoning: str = Field(min_length=1)
-    estimated_time_sec: int = Field(gt=0, le=10800)
-
-class MetricResult(BaseModel):
-    name: str
-    value: float
-    direction: Literal["maximize", "minimize"]
-
-
-class ExperimentResult(BaseModel):
-    experiment_id: str
-    status: Literal["success", "failed"]
-    model_name: str
-
-    metric: MetricResult | None = None
-    cv_std: float | None = Field(default=None, ge=0, allow_inf_nan=False)
-    duration_sec: float = Field(ge=0)
-    error: str | None = None
-
-
-class EnsemblePlan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    action: Literal["run_ensemble"]
-    hypothesis: str = Field(min_length=1)
-    models: tuple[str, str, str]
-    reasoning: str = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def validate_models(self):
-        valid_models = set(
-            ModelConfig.model_fields["name"].annotation.__args__
-        )
-        if len(set(self.models)) != 3:
-            raise ValueError("Models must be unique")
-        for name in self.models:
-            if name not in valid_models:
-                raise ValueError(f"Unknown model: {name}")
-        return self
-
-    def validate_task(self, task_type: str):
-        regression_models = {
-            "cbr", "lnr", "dtr", "rfr",
-            "svr", "lvr", "lbr", "xbr"
-        }
-        classification_models = {
-            "cbc", "dtc", "rfc", "svc",
-            "lvc", "lbc", "xbc"
-        }
-        if task_type == "regression":
-            allowed = regression_models
-        elif task_type in ("binary", "multiclass"):
-            allowed = classification_models
-        else:
-            raise ValueError(f"Unknown task type: {task_type}")
-        invalid = [
-            name for name in self.models
-            if name not in allowed
-        ]
-        if invalid:
-            raise ValueError(
-                f"Models incompatible with {task_type}: {invalid}"
-            )
-
-        return self
-</file>
-
-<file path="data_tools/__init__.py">
-
 </file>
 
 <file path="core/orchestrator.py">
@@ -69757,218 +69757,6 @@ SYSTEM_PROMPT_TEMPLATE = """
   "estimated_time_sec": 300
 }}
 """
-</file>
-
-<file path="agent/llm_agent.py">
-import json
-from openai import AsyncOpenAI
-from schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
-from prompts import SYSTEM_PROMPT_TEMPLATE
-
-class AutoResearchAgent:
-    def __init__(self, client: AsyncOpenAI, model_name: str):
-        self.client = client
-        self.model_name = model_name
-
-    def _get_fallback_configs(self, is_classification: bool):
-        # конфиги если qwen недоступен
-        if is_classification:
-            return [
-                {"name": "lbc", "hyperparameters": {"n_estimators": 300, "num_leaves": 31, "learning_rate": 0.05}},
-                {"name": "cbc", "hyperparameters": {"iterations": 300, "depth": 6, "learning_rate": 0.05}},
-                {"name": "xbc", "hyperparameters": {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.05}}
-            ]
-        else:
-            return [
-                {"name": "lbr", "hyperparameters": {"n_estimators": 300, "num_leaves": 31, "learning_rate": 0.05}},
-                {"name": "cbr", "hyperparameters": {"iterations": 300, "depth": 6, "learning_rate": 0.05}},
-                {"name": "xbr", "hyperparameters": {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.05}}
-            ]
-
-    def _check_bounds(self, model_name: str, params: dict) -> dict:
-        clamped = dict(params)
-        
-        bounds = PARAM_RANGES.get(model_name, {})
-
-        for param, value in clamped.items():
-            if value is None:
-                continue
-                
-            if param in bounds:
-                min_val, max_val = bounds[param]
-                
-                if param in INT_PARAMS or isinstance(value, int):
-                    clamped[param] = max(min_val, min(int(value), max_val))
-                elif isinstance(value, float):
-                    clamped[param] = round(max(min_val, min(value, max_val)), 4)
-                    
-        return clamped
-
-    def _get_available_params_string(self) -> str:
-        """Генерирует список разрешенных параметров из PARAM_RANGES."""
-        lines = []
-        for model_name, params in PARAM_RANGES.items():
-            if not params:
-                continue
-            param_names = ", ".join(params.keys())
-            lines.append(f"- '{model_name}': {param_names}")
-        return "\n".join(lines)
-
-    async def propose(
-    self,
-    history: list[dict],
-    best_result: dict | None,
-    task_info: dict,
-    remaining_time_sec: float,
-    ) -> dict:
-            
-        recent_history = history[-5:] if len(history) > 5 else history
-        history_str = json.dumps(recent_history, indent=2, ensure_ascii=False)
-        best_str = json.dumps(best_result, indent=2, ensure_ascii=False) if best_result else "Пока нет успешных экспериментов"
-        available_params_str = self._get_available_params_string()
-
-        
-        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
-            task_type=task_info.get("task_type", "unknown"),
-            metric_name=task_info.get("metric_name", "unknown"),
-            task_description=task_info.get("description", ""),
-            n_rows=task_info.get("n_rows", "unknown"),
-            remaining_time_sec=remaining_time_sec,
-            available_params=available_params_str,
-            best_str=best_str,
-            history_str=history_str
-        )
-
-        try:
-
-            response = await self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[{"role": "system", "content": system_prompt}],
-                response_format={"type": "json_object"},
-                temperature=0.7
-            )
-            raw_json = json.loads(response.choices[0].message.content)
-
-            if isinstance(raw_json, list):
-                if len(raw_json) > 0 and isinstance(raw_json[0], dict):
-                    raw_json = raw_json[0]
-                else:
-                    raise ValueError(f"LLM returned an empty or invalid list: {raw_json}")
-
-            if not isinstance(raw_json, dict):
-                raise ValueError(f"LLM returned an invalid format (expected dict, got {type(raw_json)}): {raw_json}")
-            
-            validated_action = ExperimentPlan(**raw_json)
-            return validated_action.model_dump()
-            
-        except Exception as e:
-            print(f"[Agent Warning] LLM or API Error: {e}. Using fallback.")
-            
-            is_classification = task_info.get("task_type", "").lower() in (
-            "binary",
-            "multiclass",
-            "classification",
-            )
-
-            past_configs = set()
-            for exp in history:
-                # Не повторяем что уже было
-                model_str = exp.get("model", "")
-                params_str = str(sorted(exp.get("hyperparameters", {}).items()))
-                past_configs.add(f"{model_str}_{params_str}")
-
-            def is_duplicate(model_name, params):
-                model_str = model_name
-                params_str = str(sorted(params.items()))
-                return f"{model_str}_{params_str}" in past_configs
-
-            successful_exps = [exp for exp in history if exp.get("status") == "success"]
-            
-            fallback_dict = None
-            
-            if successful_exps:
-                # Сценарий 1: Есть история. Берем лучший и мутируем.
-                metric_name = task_info.get("metric_name", "rmse")
-                if metric_name in ["rmse", "mae", "mse"]:
-                    best_exp = min(successful_exps, key=lambda x: x["score"] if x["score"] is not None else float('inf'))
-                else:
-                    best_exp = max(successful_exps, key=lambda x: x["score"] if x["score"] is not None else float('-inf'))
-                
-                best_model_name = best_exp["model"]
-                best_params = dict(best_exp["hyperparameters"])
-                
-                # Мутируем параметры
-                for attempt in range(5): #пусть 5, если на хватит, сделаем больше
-                    mutated_params = dict(best_params)
-                    
-                    if "learning_rate" in mutated_params:
-                        mutated_params["learning_rate"] = round(mutated_params["learning_rate"] * (0.8 - attempt * 0.1), 4)
-                    
-                    if "iterations" in mutated_params:
-                        mutated_params["iterations"] = int(mutated_params["iterations"] * (1.5 + attempt * 0.5))
-                    elif "n_estimators" in mutated_params:
-                        mutated_params["n_estimators"] = int(mutated_params["n_estimators"] * (1.5 + attempt * 0.5))
-                    
-                    if "max_depth" in mutated_params and mutated_params["max_depth"] is not None:
-                        mutated_params["max_depth"] = int(mutated_params["max_depth"] * (1.2 + attempt * 0.1))
-                    
-                    if "C" in mutated_params: #Для SVM
-                        mutated_params["C"] = round(mutated_params["C"] * (1.5 + attempt), 2)
-
-                    #Если параметров нет вообще добавим дефолтный lr
-                    if not mutated_params and best_model_name not in ["lnr"]:
-                         mutated_params["learning_rate"] = 0.05
-
-                    mutated_params = self._check_bounds(best_model_name, mutated_params)
-
-                    if not is_duplicate(best_model_name, mutated_params):
-                        fallback_dict = {
-                            "action": "run_experiment",
-                            "hypothesis": f"Smart Fallback: tuning best model ({best_model_name})",
-                            "model": {"name": best_model_name, "hyperparameters": mutated_params},
-                            "features": {"strategy": "baseline", "drop_columns": []},
-                            "reasoning": "LLM failed. Mutating best known config to find a unique untested combination.",
-                            "estimated_time_sec": 300
-                        }
-                        break #уникальный конфиг найден, выходим
-                
-                #Если есть совпадения после 5 попытки -> сц. 2
-                if fallback_dict is None:
-                    print("[Agent Warning] Mutation failed to find unique config. Falling back to defaults.")
-
-            if fallback_dict is None:
-                # Сценарий 2: Истории нет или дубликат, берем заранее подготовленный кофиг выше
-                fallbacks = self._get_fallback_configs(is_classification)
-                
-                for cfg in fallbacks:
-                    if not is_duplicate(cfg["name"], cfg["hyperparameters"]):
-                        fallback_dict = {
-                            "action": "run_experiment",
-                            "hypothesis": f"Safe Fallback: exploring {cfg['name']}",
-                            "model": cfg,
-                            "features": {"strategy": "baseline", "drop_columns": []},
-                            "reasoning": "LLM failed. Trying a robust baseline from a predefined list.",
-                            "estimated_time_sec": 300
-                        }
-                        break
-
-                if fallback_dict is None:
-                    fallback_dict = {
-                        "action": "run_experiment",
-                        "hypothesis": "Emergency Fallback: extreme config",
-                        "model": {
-                            "name": "lbc" if is_classification else "lbr", 
-                            "hyperparameters": {"n_estimators": 100, "learning_rate": 0.1}
-                        },
-                        "features": {"strategy": "baseline", "drop_columns": []},
-                        "reasoning": "All fallbacks tested. Using ultra-fast baseline.",
-                        "estimated_time_sec": 300
-                    }
-
-            try:
-                return ExperimentPlan(**fallback_dict).model_dump()
-            except Exception as ve:
-                raise RuntimeError(f"Fallback validation failed: {ve}")
 </file>
 
 <file path="data_tools/models.py">
@@ -70914,6 +70702,218 @@ if __name__ == "__main__":
             output_path=str(task_path.parent / "submission.csv"),
         )
     )
+</file>
+
+<file path="agent/llm_agent.py">
+import json
+from openai import AsyncOpenAI
+from schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
+from prompts import SYSTEM_PROMPT_TEMPLATE
+
+class AutoResearchAgent:
+    def __init__(self, client: AsyncOpenAI, model_name: str):
+        self.client = client
+        self.model_name = model_name
+
+    def _get_fallback_configs(self, is_classification: bool):
+        # конфиги если qwen недоступен
+        if is_classification:
+            return [
+                {"name": "lbc", "hyperparameters": {"n_estimators": 300, "num_leaves": 31, "learning_rate": 0.05}},
+                {"name": "cbc", "hyperparameters": {"iterations": 300, "depth": 6, "learning_rate": 0.05}},
+                {"name": "xbc", "hyperparameters": {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.05}}
+            ]
+        else:
+            return [
+                {"name": "lbr", "hyperparameters": {"n_estimators": 300, "num_leaves": 31, "learning_rate": 0.05}},
+                {"name": "cbr", "hyperparameters": {"iterations": 300, "depth": 6, "learning_rate": 0.05}},
+                {"name": "xbr", "hyperparameters": {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.05}}
+            ]
+
+    def _check_bounds(self, model_name: str, params: dict) -> dict:
+        clamped = dict(params)
+        
+        bounds = PARAM_RANGES.get(model_name, {})
+
+        for param, value in clamped.items():
+            if value is None:
+                continue
+                
+            if param in bounds:
+                min_val, max_val = bounds[param]
+                
+                if param in INT_PARAMS or isinstance(value, int):
+                    clamped[param] = max(min_val, min(int(value), max_val))
+                elif isinstance(value, float):
+                    clamped[param] = round(max(min_val, min(value, max_val)), 4)
+                    
+        return clamped
+
+    def _get_available_params_string(self) -> str:
+        """Генерирует список разрешенных параметров из PARAM_RANGES."""
+        lines = []
+        for model_name, params in PARAM_RANGES.items():
+            if not params:
+                continue
+            param_names = ", ".join(params.keys())
+            lines.append(f"- '{model_name}': {param_names}")
+        return "\n".join(lines)
+
+    async def propose(
+    self,
+    history: list[dict],
+    best_result: dict | None,
+    task_info: dict,
+    remaining_time_sec: float,
+    ) -> dict:
+            
+        recent_history = history[-5:] if len(history) > 5 else history
+        history_str = json.dumps(recent_history, indent=2, ensure_ascii=False)
+        best_str = json.dumps(best_result, indent=2, ensure_ascii=False) if best_result else "Пока нет успешных экспериментов"
+        available_params_str = self._get_available_params_string()
+
+        
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+            task_type=task_info.get("task_type", "unknown"),
+            metric_name=task_info.get("metric_name", "unknown"),
+            task_description=task_info.get("description", ""),
+            n_rows=task_info.get("n_rows", "unknown"),
+            remaining_time_sec=remaining_time_sec,
+            available_params=available_params_str,
+            best_str=best_str,
+            history_str=history_str
+        )
+
+        try:
+
+            response = await self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "system", "content": system_prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.7
+            )
+            raw_json = json.loads(response.choices[0].message.content)
+
+            if isinstance(raw_json, list):
+                if len(raw_json) > 0 and isinstance(raw_json[0], dict):
+                    raw_json = raw_json[0]
+                else:
+                    raise ValueError(f"LLM returned an empty or invalid list: {raw_json}")
+
+            if not isinstance(raw_json, dict):
+                raise ValueError(f"LLM returned an invalid format (expected dict, got {type(raw_json)}): {raw_json}")
+            
+            validated_action = ExperimentPlan(**raw_json)
+            return validated_action.model_dump()
+            
+        except Exception as e:
+            print(f"[Agent Warning] LLM or API Error: {e}. Using fallback.")
+            
+            is_classification = task_info.get("task_type", "").lower() in (
+            "binary",
+            "multiclass",
+            "classification",
+            )
+
+            past_configs = set()
+            for exp in history:
+                # Не повторяем что уже было
+                model_str = exp.get("model", "")
+                params_str = str(sorted(exp.get("hyperparameters", {}).items()))
+                past_configs.add(f"{model_str}_{params_str}")
+
+            def is_duplicate(model_name, params):
+                model_str = model_name
+                params_str = str(sorted(params.items()))
+                return f"{model_str}_{params_str}" in past_configs
+
+            successful_exps = [exp for exp in history if exp.get("status") == "success"]
+            
+            fallback_dict = None
+            
+            if successful_exps:
+                # Сценарий 1: Есть история. Берем лучший и мутируем.
+                metric_name = task_info.get("metric_name", "rmse")
+                if metric_name in ["rmse", "mae", "mse"]:
+                    best_exp = min(successful_exps, key=lambda x: x["score"] if x["score"] is not None else float('inf'))
+                else:
+                    best_exp = max(successful_exps, key=lambda x: x["score"] if x["score"] is not None else float('-inf'))
+                
+                best_model_name = best_exp["model"]
+                best_params = dict(best_exp["hyperparameters"])
+                
+                # Мутируем параметры
+                for attempt in range(5): #пусть 5, если на хватит, сделаем больше
+                    mutated_params = dict(best_params)
+                    
+                    if "learning_rate" in mutated_params:
+                        mutated_params["learning_rate"] = round(mutated_params["learning_rate"] * (0.8 - attempt * 0.1), 4)
+                    
+                    if "iterations" in mutated_params:
+                        mutated_params["iterations"] = int(mutated_params["iterations"] * (1.5 + attempt * 0.5))
+                    elif "n_estimators" in mutated_params:
+                        mutated_params["n_estimators"] = int(mutated_params["n_estimators"] * (1.5 + attempt * 0.5))
+                    
+                    if "max_depth" in mutated_params and mutated_params["max_depth"] is not None:
+                        mutated_params["max_depth"] = int(mutated_params["max_depth"] * (1.2 + attempt * 0.1))
+                    
+                    if "C" in mutated_params: #Для SVM
+                        mutated_params["C"] = round(mutated_params["C"] * (1.5 + attempt), 2)
+
+                    #Если параметров нет вообще добавим дефолтный lr
+                    if not mutated_params and best_model_name not in ["lnr"]:
+                         mutated_params["learning_rate"] = 0.05
+
+                    mutated_params = self._check_bounds(best_model_name, mutated_params)
+
+                    if not is_duplicate(best_model_name, mutated_params):
+                        fallback_dict = {
+                            "action": "run_experiment",
+                            "hypothesis": f"Smart Fallback: tuning best model ({best_model_name})",
+                            "model": {"name": best_model_name, "hyperparameters": mutated_params},
+                            "features": {"strategy": "baseline", "drop_columns": []},
+                            "reasoning": "LLM failed. Mutating best known config to find a unique untested combination.",
+                            "estimated_time_sec": 300
+                        }
+                        break #уникальный конфиг найден, выходим
+                
+                #Если есть совпадения после 5 попытки -> сц. 2
+                if fallback_dict is None:
+                    print("[Agent Warning] Mutation failed to find unique config. Falling back to defaults.")
+
+            if fallback_dict is None:
+                # Сценарий 2: Истории нет или дубликат, берем заранее подготовленный кофиг выше
+                fallbacks = self._get_fallback_configs(is_classification)
+                
+                for cfg in fallbacks:
+                    if not is_duplicate(cfg["name"], cfg["hyperparameters"]):
+                        fallback_dict = {
+                            "action": "run_experiment",
+                            "hypothesis": f"Safe Fallback: exploring {cfg['name']}",
+                            "model": cfg,
+                            "features": {"strategy": "baseline", "drop_columns": []},
+                            "reasoning": "LLM failed. Trying a robust baseline from a predefined list.",
+                            "estimated_time_sec": 300
+                        }
+                        break
+
+                if fallback_dict is None:
+                    fallback_dict = {
+                        "action": "run_experiment",
+                        "hypothesis": "Emergency Fallback: extreme config",
+                        "model": {
+                            "name": "lbc" if is_classification else "lbr", 
+                            "hyperparameters": {"n_estimators": 100, "learning_rate": 0.1}
+                        },
+                        "features": {"strategy": "baseline", "drop_columns": []},
+                        "reasoning": "All fallbacks tested. Using ultra-fast baseline.",
+                        "estimated_time_sec": 300
+                    }
+
+            try:
+                return ExperimentPlan(**fallback_dict).model_dump()
+            except Exception as ve:
+                raise RuntimeError(f"Fallback validation failed: {ve}")
 </file>
 
 </files>

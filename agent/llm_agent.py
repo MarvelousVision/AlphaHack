@@ -1,7 +1,13 @@
 import json
 from openai import AsyncOpenAI
-from schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
+from schemas import ExperimentPlan, EnsemblePlan, PARAM_RANGES, INT_PARAMS
 from prompts import SYSTEM_PROMPT_TEMPLATE
+
+REGRESSION_MODELS_TEXT = "cbr, lbr, xbr, rfr, dtr, svr, lvr, lnr"
+CLASSIFICATION_MODELS_TEXT = "cbc, lbc, xbc, rfc, dtc, svc, lvc"
+
+REGRESSION_FALLBACK = ["cbr", "lbr", "rfr"]
+CLASSIFICATION_FALLBACK = ["cbc", "lbc", "rfc"]
 
 class AutoResearchAgent:
     def __init__(self, client: AsyncOpenAI, model_name: str):
@@ -207,5 +213,24 @@ class AutoResearchAgent:
                 return ExperimentPlan(**fallback_dict).model_dump()
             except Exception as ve:
                 raise RuntimeError(f"Fallback validation failed: {ve}")
+
+    async def propose_ensemble(self, task_info: dict) -> dict:
+        task_type = str(task_info.get("task_type", "")).lower()
+
+        if task_type == "regression":
+            models = list(REGRESSION_FALLBACK)
+        else:
+            models = list(CLASSIFICATION_FALLBACK)
+
+        plan = EnsemblePlan(
+            action="run_ensemble",
+            hypothesis="Three complementary classifiers",
+            models=tuple(models),
+            reasoning=("Combine boosting and bagging"),
+        )
+
+        plan.validate_task(task_type)
+
+        return plan.model_dump()
 
     
