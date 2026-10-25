@@ -14,7 +14,6 @@ from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from xgboost import XGBRegressor, XGBClassifier
 from lightgbm import LGBMRegressor, LGBMClassifier
 from catboost import CatBoostRegressor, CatBoostClassifier
-from solution import X_train, y, X_test, cat, numeric, task, ids, tgt, id_name
 
 MODELS = {
     'lnr': {'model': LinearRegression,
@@ -63,11 +62,30 @@ MODELS = {
             'params': (('n_estimators', 100, 1000),)},
     'xbc': {'model': XGBClassifier,
             'task': ('binary', 'multiclass'),
-            'params': (('n_estimators', 100, 1000),)}
+            'params': (('n_estimators', 100, 1000),)},
+    'cbr': {'model': CatBoostRegressor,
+            'task': 'regression',
+            'params': (('n_estimators', 100, 1000),)},
+    'cbc': {'model': CatBoostClassifier,
+            'task': ('binary', 'multiclass'),
+            'params': (('n_estimators', 100, 1000),)},
 }
 
 
-def choir(m1: str, m2: str, m3: str, time_left: int) -> pd.DataFrame:
+def choir(m1: str,
+          m2: str,
+          m3: str,
+          time_left: int,
+          task: str,
+          cat: list,
+          numeric: list,
+          train: pd.DataFrame,
+          target: np.ndarray,
+          tgt: str,
+          test: pd.DataFrame,
+          test_ids: np.ndarray,
+          id_name: str) -> pd.DataFrame:
+
     if time_left <= 0:
         raise ValueError('time_left must be positive.')
 
@@ -79,13 +97,6 @@ def choir(m1: str, m2: str, m3: str, time_left: int) -> pd.DataFrame:
             raise ValueError(f'Model {model} is not supported.')
         if task not in MODELS[model]['task']:
             raise ValueError(f'Model {model} is not for {task}.')
-
-    test_ids = ids.to_numpy().ravel()
-    features = cat + numeric
-
-    train = X_train.select(features).to_pandas()
-    test = X_test.select(features).to_pandas()
-    target = y[tgt].to_numpy()
 
     if task == 'regression':
         target = target.astype(float)
@@ -127,16 +138,8 @@ def choir(m1: str, m2: str, m3: str, time_left: int) -> pd.DataFrame:
                 allow_writing_files=False,
             )
 
-            model_train = train.copy()
-            model_test = test.copy()
-
-            for column in cat:
-                model_train[column] = (
-                    model_train[column].fillna('__MISSING__').astype(str)
-                )
-                model_test[column] = (
-                    model_test[column].fillna('__MISSING__').astype(str)
-                )
+            model_train = train
+            model_test = test
 
             pipeline = Pipeline([('model', model)])
 
@@ -170,15 +173,15 @@ def choir(m1: str, m2: str, m3: str, time_left: int) -> pd.DataFrame:
         def objective(trial):
             params = {}
 
-            for parameter, low, high in config['params']:
-                if isinstance(low, bool):
-                    value = trial.suggest_categorical(parameter, [low, high])
-                elif isinstance(low, int) and isinstance(high, int):
-                    value = trial.suggest_int(parameter, low, high)
+            for parameter in config['params']:
+                if isinstance(parameter[1], float):
+                    value = trial.suggest_floatl(*parameter)
+                elif isinstance(parameter[1], int):
+                    value = trial.suggest_int(*parameter)
                 else:
-                    value = trial.suggest_float(parameter, low, high)
+                    value = trial.suggest_categorica(parameter[0], [*parameter[1:]])
 
-                params[f'model__{parameter}'] = value
+                params[f'{parameter[0]}'] = value
 
             candidate = clone(pipeline).set_params(**params)
 
@@ -188,8 +191,7 @@ def choir(m1: str, m2: str, m3: str, time_left: int) -> pd.DataFrame:
                 target,
                 scoring=scoring,
                 cv=cv,
-                n_jobs=1,
-                error_score='raise',
+                n_jobs=1
             ).mean()
 
         remaining = time_left - (monotonic() - started)

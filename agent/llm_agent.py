@@ -1,7 +1,7 @@
 import json
 from openai import AsyncOpenAI
-from core.schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
-from agent.prompts import SYSTEM_PROMPT_TEMPLATE
+from schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
+from prompts import SYSTEM_PROMPT_TEMPLATE
 
 class AutoResearchAgent:
     def __init__(self, client: AsyncOpenAI, model_name: str):
@@ -207,3 +207,5 @@ class AutoResearchAgent:
                 return ExperimentPlan(**fallback_dict).model_dump()
             except Exception as ve:
                 raise RuntimeError(f"Fallback validation failed: {ve}")
+
+    
