@@ -174,65 +174,80 @@ def unimodel(model: str,
             }
 
 
-def the_end(num: int = 1) -> pd.DataFrame:
-    res = pd.DataFrame({id_name: ids[id_name]})
+def the_end(model: str,
+            best_params: dict,
+            task: str,
+            cat: list,
+            numeric: list,
+            train: pd.DataFrame,
+            target: np.ndarray,
+            test: pd.DataFrame,
+            to_drop: Optional[list[str] | str] = None) -> np.ndarray:
 
-    with open(WAY_TO_JSON, 'r') as f:
-        info = json.load(f)[str(num)]
+    if to_drop is not None:
+        if isinstance(to_drop, str):
+            train, test = train.drop(to_drop, axis=1), test.drop(to_drop, axis=1)
+            cat = [c for c in cat if c != to_drop]
+            numeric = [n for n in numeric if n != to_drop]
+        else:
+            train, test = train.drop(columns=to_drop), test.drop(columns=to_drop)
+            cat = [c for c in cat if c not in to_drop]
+            numeric = [n for n in numeric if n not in to_drop]
 
-    model = info['model']
-    if model is None:
-        return pd.DataFrame()
+    y = target.ravel()
 
-    to_drop = info['to_drop']
-    if to_drop is None:
-        train, test = X_train, X_test
-        cats = cat
-        numerics = numeric
-    elif isinstance(to_drop, str):
-        train, test = X_train.drop(to_drop, axis=1), X_test.drop(to_drop, axis=1)
-        cats = [c for c in cat if c != to_drop]
-        numerics = [n for n in numeric if n != to_drop]
-    else:
-        train, test = X_train.drop(columns=to_drop), X_test.drop(columns=to_drop)
-        cats = [c for c in cat if c not in to_drop]
-        numerics = [n for n in numeric if n not in to_drop]
+    if model not in MODELS: raise ValueError(f'Model {model} is not supported.')
+    if task not in MODELS[model]['task']: raise ValueError(f'Model {model} is not for {task}.')
 
     if task == 'regression':
-        target = float_y()
+        y = y.astype(float)
     else:
-        encoder = LabelEncoder()
-        target = encoder.fit_transform(y)
+        label_encoder = LabelEncoder()
+        y = label_encoder.fit_transform(y)
 
-    if model in ['cbr', 'cbc']:
-        optimus = 'passthrough'
-
-        estimator = CatBoostRegressor(cat_features=cats, **info['args']) if model == 'cbr' else CatBoostClassifier(cat_features=cats, **info['args'])
-
-    else:
-        optimus = ColumnTransformer(
-            transformers=[
-                ('encoder', OneHotEncoder(handle_unknown='ignore'), cats),
-                ('scaler', StandardScaler(), numerics)
-            ],
-            remainder='passthrough'
-        )
-
-        estimator = MODELS.get(model, None)
-
-        if estimator is None:
-            return pd.DataFrame()
-
-        estimator = estimator['model'](**info['args'])
-
-    pipe = Pipeline(
-        steps=[
-            ('preprocessor', optimus),
-            ('estimator', estimator)
-        ]
+    tree_models = (
+        DecisionTreeRegressor, DecisionTreeClassifier,
+        RandomForestRegressor, RandomForestClassifier,
+        LGBMRegressor, LGBMClassifier,
+        XGBRegressor, XGBClassifier,
+        CatBoostRegressor, CatBoostClassifier,
     )
 
-    pipe.fit(train, target)
-    res[tgt] = pipe.predict(test) if task == 'regression' else encoder.inverse_transform(pipe.predict(test))
+    model_class = MODELS[model]['model']
+    model_object = model_class(**best_params)
 
-    return res
+    if issubclass(model_class, (CatBoostRegressor, CatBoostClassifier)):
+        model_object.set_params(
+            cat_features=cat,
+            verbose=False,
+            allow_writing_files=False
+        )
+
+        pipeline = Pipeline([('model', model_object)])
+
+    else:
+        preprocessing = ColumnTransformer(
+            transformers=[
+                (
+                    'cats',
+                    OneHotEncoder(handle_unknown='ignore'),
+                    cat,
+                ),
+                (
+                    'numerics',
+                    'passthrough'
+                    if issubclass(model_class, tree_models)
+                    else StandardScaler(),
+                    numeric,
+                ),
+            ],
+            sparse_threshold=1.0,
+        )
+
+        pipeline = Pipeline([
+            ('preprocessing', preprocessing),
+            ('model', model_object),
+        ])
+
+    pipeline.fit(train, y)
+    return pipeline.predict(test).ravel()
