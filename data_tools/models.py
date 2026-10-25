@@ -16,7 +16,6 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from xgboost import XGBRegressor, XGBClassifier
-from solution import X_train, y, X_test, cat, numeric, task, ids, tgt, id_name, METRIC, WAY_TO_JSON
 
 MODELS = {
     'lnr': {'model': LinearRegression,
@@ -47,19 +46,6 @@ MODELS = {
             'task': ['binary', 'multiclass']}
 }
 
-def encode(what = None) -> Any:
-    if what is None: return LabelEncoder().fit_transform(y)
-    return ColumnTransformer(
-        transformers=[
-            ('encoder', OneHotEncoder(), cat)
-        ],
-        remainder='passthrough'
-    ).fit_transform(what)
-
-
-def float_y() -> np.ndarray:
-    return np.ravel(y.to_numpy().astype(float))
-
 
 def unimodel(model: str,
              search_space: dict,
@@ -86,16 +72,18 @@ def unimodel(model: str,
         cats = [c for c in cat if c not in to_drop]
         numerics = [n for n in numeric if n not in to_drop]
 
+    y = target.ravel()
+
     if model not in MODELS: raise ValueError(f'Model {model} is not supported.')
     if task not in MODELS[model]['task']: raise ValueError(f'Model {model} is not for {task}.')
 
     if task == 'regression':
-        target = target.astype(float)
+        y = y.astype(float)
         scoring = 'neg_root_mean_squared_error'
         cv = KFold(n_splits=3, shuffle=True, random_state=42)
     else:
         label_encoder = LabelEncoder()
-        target = label_encoder.fit_transform(target)
+        y = label_encoder.fit_transform(y)
         scoring = 'f1_macro'
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
 
@@ -117,7 +105,7 @@ def unimodel(model: str,
             allow_writing_files=False,
         )
 
-        pipeline = Pipeline([('model', model)])
+        pipeline = Pipeline([('model', model_object)])
 
     else:
         preprocessing = ColumnTransformer(
@@ -161,7 +149,7 @@ def unimodel(model: str,
         return cross_val_score(
             candidate,
             x,
-            target,
+            y,
             scoring=scoring,
             cv=cv,
             n_jobs=1
@@ -179,7 +167,7 @@ def unimodel(model: str,
 
     return {
         'model': model,
-        'best_score': study.best_value,
+        'best_score': study.best_value if task != 'regression' else -study.best_value,
         'best_params': study.best_params,
         'duration_sec': time.time() - start,
         'completed_trials': len(study.trials)
