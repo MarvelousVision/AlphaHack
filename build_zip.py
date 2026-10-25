@@ -22,6 +22,7 @@ SOURCES = [
     "agent/prompts.py",
     "data_tools/models.py",
     "data_tools/preprocessing.py",
+    "data_tools/models2.py",
     "requirements.txt",
 ]
 

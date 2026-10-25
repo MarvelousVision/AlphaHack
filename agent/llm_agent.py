@@ -1,7 +1,26 @@
 import json
 from openai import AsyncOpenAI
-from core.schemas import ExperimentPlan, PARAM_RANGES, INT_PARAMS
-from agent.prompts import SYSTEM_PROMPT_TEMPLATE
+from core.schemas import ExperimentPlan, EnsemblePlan, PARAM_RANGES, INT_PARAMS
+from agent.prompts import (
+    SYSTEM_PROMPT_TEMPLATE,
+    STRATEGY_RECOVERY,
+    STRATEGY_STAGNATION,
+    STRATEGY_TIME_PRESSURE,
+    LESSONS_TEMPLATE,
+    ANTI_PATTERNS,
+    ENSEMBLE_PROMPT,
+    MODELS_REGRESSION,
+    MODELS_CLASSIFICATION,
+)
+
+_MODEL_TASK_COMPAT = {
+    "cbr": "regression", "lbr": "regression", "xbr": "regression",
+    "rfr": "regression", "dtr": "regression", "svr": "regression",
+    "lvr": "regression", "lnr": "regression",
+    "cbc": "classification", "lbc": "classification", "xbc": "classification",
+    "rfc": "classification", "dtc": "classification", "svc": "classification",
+    "lvc": "classification",
+}
 
 class AutoResearchAgent:
     def __init__(self, client: AsyncOpenAI, model_name: str):
@@ -52,6 +71,146 @@ class AutoResearchAgent:
             lines.append(f"- '{model_name}': {param_names}")
         return "\n".join(lines)
 
+    def _detect_situation(self, history: list[dict], best_result: dict | None,
+                      remaining_time_sec: float) -> str:
+        successful = [h for h in history if h.get("status") == "success"]
+        failed = [h for h in history if h.get("status") == "failed"]
+
+        if remaining_time_sec < 1200:
+            return "time_pressure"
+        if failed and len(history) >= 2 and all(
+            h.get("status") == "failed" for h in history[-2:]
+        ):
+            return "recovery"
+        if self._count_stagnation(history, task_info.get("metric_name", "rmse")) >= 3:
+            return "stagnation"
+        if not successful or best_result is None:
+            return "exploration"
+        if len(successful) < 5:
+            return "exploration"
+        return "exploitation"
+
+    def _count_stagnation(self, history: list[dict], metric_name: str) -> int:
+
+        successful = [h for h in history if h.get("status") == "success"]
+        if len(successful) < 2:
+            return 0
+        
+        scores = [h.get("score") for h in successful if h.get("score") is not None]
+        if not scores:
+            return 0
+        
+        is_lower_better = metric_name in ("rmse", "mae", "mse")
+        if is_lower_better:
+            best_score = min(scores)
+        else:
+            best_score = max(scores)
+
+        count = 0
+        for exp in reversed(successful):
+            score = exp.get("score")
+            if score is None:
+                continue
+
+            improved = (
+                score < best_score if is_lower_better 
+                else score > best_score
+            )
+            
+            if improved:
+
+                break
+            else:
+                count += 1
+        
+        return count
+
+    def _build_lessons(self, history: list[dict], metric_name: str) -> str:
+        """Извлекает уроки из истории экспериментов."""
+        if not history:
+            return ""
+
+        lessons = []
+        successful = [h for h in history if h.get("status") == "success"]
+        failed = [h for h in history if h.get("status") == "failed"]
+
+        is_lower_better = metric_name in ("rmse", "mae", "mse")
+
+        #Лучшие модели
+        if successful:
+            by_model: dict[str, list[float]] = {}
+            for exp in successful:
+                model = exp.get("model", "")
+                score = exp.get("score")
+                if score is not None:
+                    by_model.setdefault(model, []).append(score)
+
+            if is_lower_better:
+                best_models = sorted(by_model.items(), key=lambda x: min(x[1]))[:2]
+            else:
+                best_models = sorted(by_model.items(), key=lambda x: max(x[1]), reverse=True)[:2]
+            
+            if best_models:
+                names = ", ".join(m for m, _ in best_models)
+                lessons.append(f"Лучше всего работают: {names}. Сделай на них ставку.")
+
+        #Провалившиеся модели
+        if failed:
+            failed_models = sorted(set(h.get("model", "") for h in failed))
+            lessons.append(f"Избегай: {', '.join(failed_models)} — они падали с ошибками.")
+
+        # Лучшая конфигурация
+        if successful:
+            if is_lower_better:
+                best_exp = min(successful, key=lambda x: x.get("score") or float("inf"))
+            else:
+                best_exp = max(successful, key=lambda x: x.get("score") or float("-inf"))
+            
+            params_str = ", ".join(
+                f"{k}={v}" for k, v in best_exp.get("hyperparameters", {}).items()
+            )
+            lessons.append(
+                f"Лучшая конфигурация: {best_exp['model']}({params_str}) = {best_exp['score']:.4f}. "
+                f"Отталкивайся от неё."
+            )
+
+        durations = [h.get("duration_sec", 0) for h in successful if h.get("duration_sec")]
+        if durations:
+            avg_dur = sum(durations) / len(durations)
+            lessons.append(f"Среднее время эксперимента: {avg_dur:.0f} сек.")
+
+        return "\n".join(f"- {l}" for l in lessons)
+
+    def _validate_plan_sanity(self, plan: dict, history: list[dict], #!!!
+                              task_info: dict) -> tuple[bool, str]:
+        """Проверяет адекватность плана до запуска."""
+
+        model = plan.get("model", {}).get("name", "")
+        params = plan.get("model", {}).get("hyperparameters", {})
+        task_type = task_info.get("task_type", "").lower()
+
+        # Совместимость модели и задачи
+        expected_task = _MODEL_TASK_COMPAT.get(model)
+        if expected_task:
+            is_cls = task_type in ("binary", "multiclass", "classification")
+            is_reg = task_type == "regression"
+            if expected_task == "regression" and not is_reg:
+                return False, f"Модель {model} для регрессии, а задача — {task_type}"
+            if expected_task == "classification" and not is_cls:
+                return False, f"Модель {model} для классификации, а задача — {task_type}"
+
+        #SVM на больших данных
+        n_rows = task_info.get("n_rows")
+        if model in ("svr", "svc") and isinstance(n_rows, int) and n_rows >= 10000:
+            return False, f"SVM на {n_rows} строках = OOM"
+
+        for exp in history:
+            if exp.get("model") == model and exp.get("hyperparameters") == params:
+                return False, "Эта конфигурация уже была в истории"
+
+        return True, "OK"
+    
+
     async def propose(
     self,
     history: list[dict],
@@ -65,8 +224,29 @@ class AutoResearchAgent:
         best_str = json.dumps(best_result, indent=2, ensure_ascii=False) if best_result else "Пока нет успешных экспериментов"
         available_params_str = self._get_available_params_string()
 
+        situation = self._detect_situation(history, best_result, remaining_time_sec)
+        lessons_text = self._build_lessons(history, task_info.get("metric_name", "rmse"))
+        lessons_block = LESSONS_TEMPLATE.format(lessons=lessons_text) if lessons_text else ""
+
+        situation_block = ""
+        if situation == "recovery":
+            errors = [h for h in history if h.get("status") == "failed"][-3:]
+            errors_summary = "\n".join(
+                f"  - {e.get('model')}: {e.get('error', 'unknown')}" for e in errors
+            )
+            situation_block = "\n\nПРИОРИТЕТНАЯ СТРАТЕГИЯ (переопределяет базовую):\n" + STRATEGY_RECOVERY.format(errors_summary=errors_summary)
+        elif situation == "stagnation":
+            count = self._count_stagnation(history)
+            situation_block = "\n\nПРИОРИТЕТНАЯ СТРАТЕГИЯ (переопределяет базовую):\n" + STRATEGY_STAGNATION.format(stagnation_count=count)
+        elif situation == "time_pressure":
+            situation_block = "\n\nПРИОРИТЕТНАЯ СТРАТЕГИЯ (переопределяет базовую):\n" + STRATEGY_TIME_PRESSURE
+
+        anti_patterns_block = "\n\n" + ANTI_PATTERNS
+
+        lessons_final_block = "\n\n" + lessons_block if lessons_block else ""
         
-        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+        system_prompt = (
+            SYSTEM_PROMPT_TEMPLATE.format(
             task_type=task_info.get("task_type", "unknown"),
             metric_name=task_info.get("metric_name", "unknown"),
             task_description=task_info.get("description", ""),
@@ -75,7 +255,12 @@ class AutoResearchAgent:
             available_params=available_params_str,
             best_str=best_str,
             history_str=history_str
+            )
+            + situation_block
+            + anti_patterns_block
+            + lessons_final_block
         )
+
 
         try:
 
@@ -97,7 +282,13 @@ class AutoResearchAgent:
                 raise ValueError(f"LLM returned an invalid format (expected dict, got {type(raw_json)}): {raw_json}")
             
             validated_action = ExperimentPlan(**raw_json)
-            return validated_action.model_dump()
+            plan_dict = validated_action.model_dump()
+
+            ok, msg = self._validate_plan_sanity(plan_dict, history, task_info)
+            if not ok:
+                print(f"[Agent Warning] Plan rejected: {msg}. Retrying...")
+                
+            return plan_dict
             
         except Exception as e:
             print(f"[Agent Warning] LLM or API Error: {e}. Using fallback.")
@@ -207,3 +398,46 @@ class AutoResearchAgent:
                 return ExperimentPlan(**fallback_dict).model_dump()
             except Exception as ve:
                 raise RuntimeError(f"Fallback validation failed: {ve}")
+
+    async def propose_ensemble(self, task_info: dict) -> dict:
+        task_type = task_info.get("task_type", "regression").lower()
+        is_classification = task_type in ("binary", "multiclass", "classification")
+
+        models_list = (
+            ", ".join(f'"{m}"' for m in MODELS_CLASSIFICATION)
+            if is_classification
+            else ", ".join(f'"{m}"' for m in MODELS_REGRESSION)
+        )
+
+        user_prompt = ENSEMBLE_PROMPT.format(
+            task_type=task_type,
+            models_list=models_list,
+        )
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "Ты — AutoML-агент. Выбери 3 разнообразные модели для ансамбля."},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.4,
+            )
+            raw_json = json.loads(response.choices[0].message.content)
+            validated_plan = EnsemblePlan(**raw_json)
+            return validated_plan.model_dump()
+
+        except Exception as e:
+            print(f"[Agent Warning] Ensemble proposal failed: {e}. Using fallback.")
+            if is_classification:
+                models = ["cbc", "lbc", "rfc"]
+            else:
+                models = ["cbr", "lbr", "rfr"]
+
+            return {
+                    "action": "run_ensemble",
+                    "hypothesis": "Three complementary classifiers",
+                    "models": models,
+                    "reasoning": "Combine boosting and bagging"
+                    }

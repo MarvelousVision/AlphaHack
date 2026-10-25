@@ -192,10 +192,8 @@ async def run_solution(task_dir, output_path):
     sample_path = data_dir / "sample_submission.csv"
 
     X_train, y, X_test, numeric, cat, task, ids, tgt, id_name = prepare_data(
-        str(data_dir),
-        use_interactions=False,
+        str(data_dir)
     )
-
     metric_name = "rmse" if task == "regression" else "f1_macro"
     engine_metric = "RMSE" if task == "regression" else "f1_macro"
 
@@ -232,13 +230,20 @@ async def run_solution(task_dir, output_path):
         result = choir(
             *models,
             time_left=time_budget_sec,
-            X_train=polars_data["X_train"],
-            y=polars_data["y"],
-            X_test=polars_data["X_test"],
-            ids=polars_data["ids"],
+            task=task,
+            cat=cat,
+            numeric=numeric,
+            train=X_train.to_pandas(),
+            target=y[tgt].to_numpy(),
+            tgt=tgt,
+            test=X_test.to_pandas(),
+            test_ids=ids[id_name].to_numpy(),
+            id_name=id_name,
         )
+
         if not isinstance(result, pd.DataFrame):
             raise TypeError("choir must return a pandas DataFrame")
+
         if tgt not in result.columns:
             raise ValueError(f"Missing target column: {tgt}")
 
@@ -246,8 +251,6 @@ async def run_solution(task_dir, output_path):
             raise ValueError("Incorrect number of predictions")
 
         return result[tgt].to_numpy()
-
-    experiment_numbers = {}
 
     def key(plan):
         return plan.model_dump_json(include={"model", "features"})
@@ -330,22 +333,50 @@ async def run_solution(task_dir, output_path):
             history_path="artifacts/history.jsonl",
         )
 
-        if os.getenv("ENSEMBLE_ENABLED", "0") == "1":
-            print("[ENSEMBLE] Training fallback baseline", flush=True)
-            baseline_result = runner.run(baseline_plan)
+        if os.getenv("ENSEMBLE_ENABLED", "1") == "1":
+            from catboost import CatBoostRegressor, CatBoostClassifier
 
-            if baseline_result.status != "success":
-                raise RuntimeError(
-                    f"Fallback baseline failed: {baseline_result.error}"
+            print("[BASELINE] Training direct CatBoost", flush=True)
+
+            baseline_model = (
+                CatBoostRegressor(
+                    iterations=100,
+                    depth=6,
+                    verbose=False,
+                    allow_writing_files=False,
                 )
-            baseline_predictions = train_and_predict(baseline_plan)
+                if task == "regression"
+                else CatBoostClassifier(
+                    iterations=100,
+                    depth=6,
+                    verbose=False,
+                    allow_writing_files=False,
+                )
+            )
+
+            baseline_train = X_train.to_pandas().copy()
+            baseline_test = X_test.to_pandas().copy()
+
+            for col in cat:
+                baseline_train[col] = baseline_train[col].fillna("__missing__").astype(str)
+                baseline_test[col] = baseline_test[col].fillna("__missing__").astype(str)
+
+            baseline_model.fit(
+                baseline_train,
+                y[tgt].to_numpy().ravel(),
+                cat_features=cat,
+            )
+
+            baseline_predictions = baseline_model.predict(baseline_test).ravel()
+
             save_submission(
                 baseline_predictions,
                 sample_path,
                 output_path,
                 tgt,
             )
-            print("[BASELINE] Fallback submission saved", flush=True)
+
+            print("[BASELINE] Direct CatBoost saved", flush=True)
             try:
                 remaining = TOTAL_BUDGET - (
                     time.perf_counter() - started_at

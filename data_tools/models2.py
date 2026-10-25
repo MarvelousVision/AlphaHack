@@ -1,4 +1,4 @@
-import optuna
+﻿import optuna
 import numpy as np
 import pandas as pd
 from time import monotonic
@@ -15,60 +15,181 @@ from xgboost import XGBRegressor, XGBClassifier
 from lightgbm import LGBMRegressor, LGBMClassifier
 from catboost import CatBoostRegressor, CatBoostClassifier
 
+
 MODELS = {
-    'lnr': {'model': LinearRegression,
-            'task': 'regression',
-            'params': (('fit_intercept', True, False),)},
-    'dtr': {'model': DecisionTreeRegressor,
-            'task': 'regression',
-            'params': (('max_depth', 2, 30),
-                       ('min_samples_split', 0.01, 0.2))},
-    'dtc': {'model': DecisionTreeClassifier,
-            'task': ('binary', 'multiclass'),
-            'params': (('max_depth', 2, 30),
-                       ('min_samples_split', 0.01, 0.2))},
-    'rfr': {'model': RandomForestRegressor,
-            'task': 'regression',
-            'params': (('max_depth', 2, 30),
-                       ('min_samples_split', 0.01, 0.2))},
-    'rfc': {'model': RandomForestClassifier,
-            'task': ('binary', 'multiclass'),
-            'params': (('max_depth', 2, 30),
-                       ('min_samples_split', 0.01, 0.2))},
-    'svr': {'model': SVR,
-            'task': 'regression',
-            'params': (('C', 0.01, 10),
-                       ('max_iter', 100, 1000))},
-    'svc': {'model': SVC,
-            'task': ('binary', 'multiclass'),
-            'params': (('C', 0.01, 10),
-                       ('max_iter', 100, 1000))},
-    'lvr': {'model': LinearSVR,
-             'task': 'regression',
-            'params': (('C', 0.01, 10),
-                       ('max_iter', 100, 1000))},
-    'lvc': {'model': LinearSVC,
-            'task': ('binary', 'multiclass'),
-            'params': (('C', 0.01, 10),
-                       ('max_iter', 100, 1000))},
-    'lbr': {'model': LGBMRegressor,
-            'task': 'regression',
-            'params': (('n_estimators', 100, 1000),)},
-    'lbc': {'model': LGBMClassifier,
-            'task': ('binary', 'multiclass'),
-            'params': (('n_estimators', 100, 1000),)},
-    'xbr': {'model': XGBRegressor,
-            'task': 'regression',
-            'params': (('n_estimators', 100, 1000),)},
-    'xbc': {'model': XGBClassifier,
-            'task': ('binary', 'multiclass'),
-            'params': (('n_estimators', 100, 1000),)},
-    'cbr': {'model': CatBoostRegressor,
-            'task': 'regression',
-            'params': (('n_estimators', 100, 1000),)},
-    'cbc': {'model': CatBoostClassifier,
-            'task': ('binary', 'multiclass'),
-            'params': (('n_estimators', 100, 1000),)},
+    'lnr': {
+        'model': LinearRegression,
+        'task': 'regression',
+        'params': (('fit_intercept', True, False),),
+    },
+
+    'dtr': {
+        'model': DecisionTreeRegressor,
+        'task': 'regression',
+        'params': (
+            ('max_depth', 2, 30),
+            ('min_samples_split', 0.01, 0.2),
+            ('min_samples_leaf', 1, 20),
+            ('max_features', 0.5, 1.0),
+        ),
+    },
+    'dtc': {
+        'model': DecisionTreeClassifier,
+        'task': ('binary', 'multiclass'),
+        'params': (
+            ('max_depth', 2, 30),
+            ('min_samples_split', 0.01, 0.2),
+            ('min_samples_leaf', 1, 20),
+            ('max_features', 0.5, 1.0),
+        ),
+    },
+
+    'rfr': {
+        'model': RandomForestRegressor,
+        'task': 'regression',
+        'params': (
+            ('n_estimators', 100, 500),
+            ('max_depth', 3, 30),
+            ('min_samples_split', 0.01, 0.15),
+            ('min_samples_leaf', 1, 15),
+            ('max_features', 0.5, 1.0),
+        ),
+    },
+    'rfc': {
+        'model': RandomForestClassifier,
+        'task': ('binary', 'multiclass'),
+        'params': (
+            ('n_estimators', 100, 500),
+            ('max_depth', 3, 30),
+            ('min_samples_split', 0.01, 0.15),
+            ('min_samples_leaf', 1, 15),
+            ('max_features', 0.5, 1.0),
+        ),
+    },
+
+    'svr': {
+        'model': SVR,
+        'task': 'regression',
+        'params': (
+            ('C', 0.01, 10.0),
+            ('epsilon', 0.01, 0.5),
+            ('gamma', 0.001, 0.1),
+            ('max_iter', 500, 2000),
+        ),
+    },
+    'svc': {
+        'model': SVC,
+        'task': ('binary', 'multiclass'),
+        'params': (
+            ('C', 0.01, 10.0),
+            ('gamma', 0.001, 0.1),
+            ('max_iter', 500, 2000),
+        ),
+    },
+    'lvr': {
+        'model': LinearSVR,
+        'task': 'regression',
+        'params': (
+            ('C', 0.01, 10.0),
+            ('epsilon', 0.0, 0.5),
+            ('max_iter', 500, 2000),
+        ),
+    },
+    'lvc': {
+        'model': LinearSVC,
+        'task': ('binary', 'multiclass'),
+        'params': (
+            ('C', 0.01, 10.0),
+            ('max_iter', 500, 2000),
+        ),
+    },
+
+    'lbr': {
+        'model': LGBMRegressor,
+        'task': 'regression',
+        'params': (
+            ('n_estimators', 200, 800),
+            ('learning_rate', 0.02, 0.15),
+            ('num_leaves', 15, 127),
+            ('max_depth', 3, 12),
+            ('min_child_samples', 10, 100),
+            ('subsample', 0.6, 1.0),
+            ('colsample_bytree', 0.6, 1.0),
+            ('reg_alpha', 0.0, 5.0),
+            ('reg_lambda', 0.0, 5.0),
+        ),
+    },
+    'lbc': {
+        'model': LGBMClassifier,
+        'task': ('binary', 'multiclass'),
+        'params': (
+            ('n_estimators', 200, 800),
+            ('learning_rate', 0.02, 0.15),
+            ('num_leaves', 15, 127),
+            ('max_depth', 3, 12),
+            ('min_child_samples', 10, 100),
+            ('subsample', 0.6, 1.0),
+            ('colsample_bytree', 0.6, 1.0),
+            ('reg_alpha', 0.0, 5.0),
+            ('reg_lambda', 0.0, 5.0),
+        ),
+    },
+
+    'xbr': {
+        'model': XGBRegressor,
+        'task': 'regression',
+        'params': (
+            ('n_estimators', 200, 800),
+            ('learning_rate', 0.02, 0.15),
+            ('max_depth', 3, 10),
+            ('min_child_weight', 1.0, 10.0),
+            ('subsample', 0.6, 1.0),
+            ('colsample_bytree', 0.6, 1.0),
+            ('gamma', 0.0, 5.0),
+            ('reg_alpha', 0.0, 5.0),
+            ('reg_lambda', 0.1, 10.0),
+        ),
+    },
+    'xbc': {
+        'model': XGBClassifier,
+        'task': ('binary', 'multiclass'),
+        'params': (
+            ('n_estimators', 200, 800),
+            ('learning_rate', 0.02, 0.15),
+            ('max_depth', 3, 10),
+            ('min_child_weight', 1.0, 10.0),
+            ('subsample', 0.6, 1.0),
+            ('colsample_bytree', 0.6, 1.0),
+            ('gamma', 0.0, 5.0),
+            ('reg_alpha', 0.0, 5.0),
+            ('reg_lambda', 0.1, 10.0),
+        ),
+    },
+
+    'cbr': {
+        'model': CatBoostRegressor,
+        'task': 'regression',
+        'params': (
+            ('iterations', 200, 800),
+            ('depth', 4, 8),
+            ('learning_rate', 0.02, 0.15),
+            ('l2_leaf_reg', 1.0, 10.0),
+            ('random_strength', 0.0, 2.0),
+            ('border_count', 32, 128),
+        ),
+    },
+    'cbc': {
+        'model': CatBoostClassifier,
+        'task': ('binary', 'multiclass'),
+        'params': (
+            ('iterations', 200, 800),
+            ('depth', 4, 8),
+            ('learning_rate', 0.02, 0.15),
+            ('l2_leaf_reg', 1.0, 10.0),
+            ('random_strength', 0.0, 2.0),
+            ('border_count', 32, 128),
+        ),
+    },
 }
 
 
@@ -175,13 +296,13 @@ def choir(m1: str,
 
             for parameter in config['params']:
                 if isinstance(parameter[1], float):
-                    value = trial.suggest_floatl(*parameter)
+                    value = trial.suggest_float(*parameter)
                 elif isinstance(parameter[1], int):
                     value = trial.suggest_int(*parameter)
                 else:
-                    value = trial.suggest_categorica(parameter[0], [*parameter[1:]])
+                    value = trial.suggest_categorical(parameter[0], [*parameter[1:]])
 
-                params[f'{parameter[0]}'] = value
+                params[f'model__{parameter[0]}'] = value
 
             candidate = clone(pipeline).set_params(**params)
 
@@ -195,30 +316,40 @@ def choir(m1: str,
             ).mean()
 
         remaining = time_left - (monotonic() - started)
+        if remaining < 30 * 60:
+            if not predictions:
+                raise RuntimeError('All ensemble models failed!')
+            else:
+                break
+        try:
+            tuning_budget = max(1.0, (remaining - 300) / (4 - index))
 
-        tuning_budget = max(1.0, (remaining - 300) / (4 - index))
+            study = optuna.create_study(
+                direction='maximize',
+                sampler=optuna.samplers.TPESampler(seed=42),
+            )
+            study.optimize(
+                objective,
+                n_trials=30,
+                timeout=tuning_budget,
+            )
 
-        study = optuna.create_study(
-            direction='maximize',
-            sampler=optuna.samplers.TPESampler(seed=42),
-        )
-        study.optimize(
-            objective,
-            n_trials=30,
-            timeout=tuning_budget,
-        )
+            best_model = clone(pipeline).set_params(**{
+                f'model__{parameter}': value
+                for parameter, value in study.best_params.items()
+            })
+            best_model.fit(model_train, target)
 
-        best_model = clone(pipeline).set_params(**{
-            f'model__{parameter}': value
-            for parameter, value in study.best_params.items()
-        })
-        best_model.fit(model_train, target)
+            predictions.append(
+                np.asarray(best_model.predict(model_test)).ravel()
+            )
+            scores.append(study.best_value)
+            durations.append(monotonic() - model_started)
+        except:
+            continue
 
-        predictions.append(
-            np.asarray(best_model.predict(model_test)).ravel()
-        )
-        scores.append(study.best_value)
-        durations.append(monotonic() - model_started)
+    if not predictions:
+        raise RuntimeError('All ensemble models failed!')
 
     if task == 'regression':
             result = np.mean(predictions, axis=0)
