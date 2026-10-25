@@ -7,7 +7,7 @@ from sklearn.svm import SVC, SVR, LinearSVR, LinearSVC
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import f1_score, make_scorer
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold, StratifiedKFold, cross_val_score
 from catboost import CatBoostRegressor, CatBoostClassifier
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -86,7 +86,7 @@ def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = N
         target = float_y()
     else:
         encoder = LabelEncoder()
-        target = encoder.fit_transform(y)
+        target = encoder.fit_transform(y[tgt].to_numpy().ravel())
 
     if model in ['cbr', 'cbc']:
         optimus = 'passthrough'
@@ -123,8 +123,20 @@ def unimodel(model: Optional[str] = None, to_drop: Optional[list[str] | str] = N
         ]
     )
     scoring = 'neg_root_mean_squared_error' if METRIC == 'RMSE' else make_scorer(f1_score, average='macro')
-    score = cross_val_score(pipe, x, target, scoring=scoring)
-
+    cv = (
+    KFold(n_splits=3, shuffle=True, random_state=42)
+    if task == "regression"
+    else StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+)
+    score = cross_val_score(
+        pipe,
+        x,
+        target,
+        scoring=scoring,
+        cv=cv,
+        n_jobs=1,
+    )
+    
     if METRIC == 'RMSE': score *= -1
     previos[cnt] = {
         'model': model,
@@ -169,7 +181,7 @@ def the_end(num: int = 1) -> pd.DataFrame:
         target = float_y()
     else:
         encoder = LabelEncoder()
-        target = encoder.fit_transform(y)
+        target = encoder.fit_transform(y[tgt].to_numpy().ravel())
 
     if model in ['cbr', 'cbc']:
         optimus = 'passthrough'

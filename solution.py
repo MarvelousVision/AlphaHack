@@ -81,9 +81,46 @@ async def run_ml_pipeline(
     saved_plan = baseline_plan
     orchestrator.estimated_final_train_sec = baseline_full_train_sec
     remaining = TOTAL_BUDGET - (time.perf_counter() - started_at)
+    def on_new_best(plan, result, remaining_sec):
+        nonlocal saved_plan
+
+        if remaining_sec <= FINAL_RESERVE:
+            print("[SAVE BEST] Not enough time", flush=True)
+            return
+        estimated = orchestrator.estimate_duration(plan) * 1.5
+        safety_margin = 300
+
+        if remaining_sec < estimated + FINAL_RESERVE + safety_margin:
+            print(
+                f"[SAVE BEST SKIPPED] {plan.model.name}: "
+                f"remaining={remaining_sec:.0f}s, "
+                f"estimated={estimated:.0f}s",
+                flush=True,
+            )
+            return
+        predictions = train_and_predict(plan)
+
+        save_submission(
+            predictions,
+            sample_path,
+            output_path,
+            target_name,
+        )
+
+        saved_plan = plan
+
+        print(
+            f"[SAVE BEST] model={plan.model.name}, "
+            f"score={result.metric.value:.5f}",
+            flush=True,
+        )
     if remaining > FINAL_RESERVE and os.getenv("BASELINE_ONLY") != "1":
         try:
-            await orchestrator.run(metric_name, time_budget_sec=remaining)
+            await orchestrator.run(
+            metric_name,
+            time_budget_sec=remaining,
+            on_new_best=on_new_best,
+        )
         except Exception as exc:
             print(f"AutoResearch failed: {exc}. Keeping baseline.")
 
@@ -97,33 +134,6 @@ async def run_ml_pipeline(
             flush=True,
         )
 
-    if best_plan is not None and best_plan != baseline_plan:
-        remaining_time = TOTAL_BUDGET - (time.perf_counter() - started_at)
-
-        max_duration = tracker.get_max_model_duration(best_plan.model.name)
-        estimated_final_time = (
-            max_duration * 1.5
-            if max_duration is not None
-            else 900
-        )
-        SAFETY_MARGIN = 300
-        if remaining_time > estimated_final_time + SAFETY_MARGIN:
-            try:
-                predictions = train_and_predict(best_plan)
-                save_submission(predictions, sample_path, output_path, target_name)
-                saved_plan = best_plan
-
-                print("Best model submission saved.")
-                
-            except Exception as exc:
-                print(f"Final training failed: {exc}. Keeping baseline.")
-        else:
-            print(
-                f"[FINAL SKIPPED] Осталось {remaining_time:.0f} сек, "
-                f"оценка обучения {estimated_final_time:.0f} сек. "
-                f"Сохраняем baseline.",
-                flush=True,
-            )
     print(
             f"[SUBMISSION] Сохранена модель: {saved_plan.model.name}",
             flush=True,
@@ -333,7 +343,7 @@ async def run_solution(task_dir, output_path):
             history_path="artifacts/history.jsonl",
         )
 
-        if os.getenv("ENSEMBLE_ENABLED", "1") == "1":
+        if os.getenv("ENSEMBLE_ENABLED", "0") == "1":
             from catboost import CatBoostRegressor, CatBoostClassifier
 
             print("[BASELINE] Training direct CatBoost", flush=True)

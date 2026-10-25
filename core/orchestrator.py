@@ -67,6 +67,7 @@ class Orchestrator:
         self,
         metric_name: str,
         time_budget_sec: float | None = None,
+        on_new_best=None,
     ):
         budget = (
             time_budget_sec
@@ -161,7 +162,12 @@ class Orchestrator:
                     f"available {research_time:.0f}s"
                 )
                 continue
-
+            previous_best = self.tracker.get_best(metric_name)
+            previous_score = (
+                previous_best.metric.value
+                if previous_best is not None and previous_best.metric is not None
+                else None
+            )
             experiment_start = time.perf_counter()
             result = self.runner.run(plan)
             experiment_duration = time.perf_counter() - experiment_start
@@ -173,6 +179,30 @@ class Orchestrator:
             )
 
             self.tracker.add_experiment(plan, result)
+            if (
+                on_new_best is not None
+                and result.status == "success"
+                and result.metric is not None
+            ):
+                new_score = result.metric.value
+                direction = result.metric.direction
+
+                is_better = (
+                    previous_score is None
+                    or (
+                        new_score < previous_score
+                        if direction == "minimize"
+                        else new_score > previous_score
+                    )
+                )
+
+                if is_better:
+                    remaining_now = budget - (time.perf_counter() - start)
+
+                    try:
+                        on_new_best(plan, result, remaining_now)
+                    except Exception as exc:
+                        print(f"[SAVE BEST FAILED] {exc}", flush=True)
 
             try:
                 self.tracker.save_history(str(self.history_path))
