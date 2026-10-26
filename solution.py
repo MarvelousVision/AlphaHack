@@ -42,13 +42,20 @@ def train_baseline_predictions(
     )
 
     model = model_class(
-        iterations=iterations,
-        depth=6,
+        iterations=150,
+        depth=5,
         learning_rate=0.05,
         random_seed=42,
         verbose=False,
         allow_writing_files=False,
         thread_count=2,
+    )
+    print(
+        f"[BASELINE DATA] rows={len(train)}, "
+        f"features={train.shape[1]}, "
+        f"cat_features={len(cat)}, "
+        f"iterations={model.get_params().get('iterations')}",
+        flush=True,
     )
     model.fit(
         train,

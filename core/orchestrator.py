@@ -154,8 +154,21 @@ class Orchestrator:
                 if previous_best is not None and previous_best.metric is not None
                 else None
             )
+            experiment_budget = min(
+                float(plan.estimated_time_sec),
+                max(0.0, research_time - 120),
+            )
+
+            if experiment_budget <= 0:
+                print("Not enough time for Optuna experiment")
+                break
+
             experiment_start = time.perf_counter()
-            result = self.runner.run(plan)
+
+            result = self.runner.run(
+                plan,
+                time_budget_sec=experiment_budget,
+            )
             experiment_duration = time.perf_counter() - experiment_start
             print(
                 f"[TIMING] model={plan.model.name}, "

@@ -68,8 +68,9 @@ class ExperimentRunner:
         return None
 
     def run(
-    self,
-    plan: dict | ExperimentPlan | OptunaExperimentPlan,
+        self,
+        plan: dict | ExperimentPlan | OptunaExperimentPlan,
+        time_budget_sec: float | None = None,
     ) -> ExperimentResult:
         experiment_id = uuid.uuid4().hex
 
