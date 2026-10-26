@@ -43,7 +43,11 @@ MODELS = {
     'xbr': {'model': XGBRegressor,
             'task': 'regression'},
     'xbc': {'model': XGBClassifier,
-            'task': ['binary', 'multiclass']}
+            'task': ['binary', 'multiclass']},
+    'cbr': {'model': CatBoostRegressor,
+            'task': 'regression'},
+    'cbc': {'model': CatBoostClassifier,
+            'task': ('binary', 'multiclass')}
 }
 
 
@@ -250,4 +254,4 @@ def the_end(model: str,
         ])
 
     pipeline.fit(train, y)
-    return pipeline.predict(test).ravel()
+    return label_encoder.inverse_transform(pipeline.predict(test).ravel())
