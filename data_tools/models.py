@@ -253,4 +253,5 @@ def the_end(model: str,
         ])
 
     pipeline.fit(train, y)
-    return label_encoder.inverse_transform(pipeline.predict(test).ravel())
+    preds = pipeline.predict(test).ravel()
+    return preds if task == 'regression' else label_encoder.inverse_transform(preds)
