@@ -212,7 +212,12 @@ class AutoResearchAgent:
         if len(drop_cols) > 5:
             raise ValueError(f"drop_columns: максимум 5, пришло {len(drop_cols)}")
 
-        known_cols = task_info.get("columns") or []
+        if any((not isinstance(c, str)) or (not c.strip()) for c in drop_cols):
+            raise ValueError("drop_columns: пустые или нестроковые значения")
+        if len(set(drop_cols)) != len(drop_cols):
+            raise ValueError("drop_columns: дубликаты в списке")
+
+        known_cols = task_info.get("feature_names", []) or []
         if known_cols and drop_cols:
             known_set = set(known_cols)
             unknown = [c for c in drop_cols if c not in known_set]
@@ -252,7 +257,7 @@ class AutoResearchAgent:
         history_str = json.dumps(recent_history, indent=2, ensure_ascii=False)
         best_str = json.dumps(best_result, indent=2, ensure_ascii=False) if best_result else "Пока нет успешных экспериментов"
         available_params_str = self._get_available_params_string()
-        columns = task_info.get("columns") or []
+        columns = task_info.get("feature_names", []) or []
         if columns:
             head = columns[:200]
             available_columns_str = ", ".join(head)
