@@ -98,6 +98,7 @@ SYSTEM_PROMPT_TEMPLATE = """
         }}
     }},
     "reasoning": "Попробовать уменьшить RMSE",
+    "drop_columns": ["feature_1", "feature_2"],
     "estimated_time_sec": 900
 }}
 """

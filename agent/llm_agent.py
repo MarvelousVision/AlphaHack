@@ -208,10 +208,34 @@ class AutoResearchAgent:
         if model in ("svr", "svc") and isinstance(n_rows, int) and n_rows >= 10000:
             raise ValueError(f"SVM на {n_rows} строках = OOM")
 
+        drop_cols = plan.get("drop_columns") or []
+        if len(drop_cols) > 5:
+            raise ValueError(f"drop_columns: максимум 5, пришло {len(drop_cols)}")
+
+        known_cols = task_info.get("columns") or []
+        if known_cols and drop_cols:
+            known_set = set(known_cols)
+            unknown = [c for c in drop_cols if c not in known_set]
+            if unknown:
+                raise ValueError(f"drop_columns: неизвестные колонки {unknown}")
+
+        target = task_info.get("target_column") or task_info.get("target")
+        if target and target in drop_cols:
+            raise ValueError(f"drop_columns: нельзя удалять целевую '{target}'")
+
+        plan_drop = tuple(sorted(plan.get("drop_columns") or []))
+
         for exp in history:
             exp_params = exp.get("best_params") or exp.get("hyperparameters") or {}
-            if exp.get("model") == model and exp_params == params:
-                raise ValueError("Эта конфигурация уже была в истории")
+            exp_drop = tuple(sorted(exp.get("drop_columns") or []))
+            if (
+                exp.get("model") == model
+                and exp_params == params
+                and exp_drop == plan_drop
+            ):
+                raise ValueError(
+                    "Эта конфигурация (model + params + drop_columns) уже была в истории"
+                )
 
         return True, "OK"
     
@@ -228,6 +252,14 @@ class AutoResearchAgent:
         history_str = json.dumps(recent_history, indent=2, ensure_ascii=False)
         best_str = json.dumps(best_result, indent=2, ensure_ascii=False) if best_result else "Пока нет успешных экспериментов"
         available_params_str = self._get_available_params_string()
+        columns = task_info.get("columns") or []
+        if columns:
+            head = columns[:200]
+            available_columns_str = ", ".join(head)
+            if len(columns) > 200:
+                available_columns_str += f" ... (всего {len(columns)} колонок)"
+        else:
+            available_columns_str = "неизвестно (drop_columns не использовать)"
 
         situation = self._detect_situation(history, best_result, remaining_time_sec, task_info)
         lessons_text = self._build_lessons(history, task_info.get("metric_name", "rmse"))
@@ -256,6 +288,7 @@ class AutoResearchAgent:
             metric_name=task_info.get("metric_name", "unknown"),
             task_description=task_info.get("description", ""),
             n_rows=task_info.get("n_rows", "unknown"),
+            available_columns=available_columns_str,
             remaining_time_sec=remaining_time_sec,
             available_params=available_params_str,
             best_str=best_str,
