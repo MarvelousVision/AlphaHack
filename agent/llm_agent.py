@@ -190,7 +190,8 @@ class AutoResearchAgent:
 
         model = plan.get("model", {}).get("name", "")
         model_obj = plan.get("model", {})
-        params = model_obj.get("hyperparameters") or model_obj.get("search_space") or {}
+        plan_space = model_obj.get("search_space")
+        plan_params = model_obj.get("hyperparameters")
         task_type = task_info.get("task_type", "").lower()
 
         # Совместимость модели и задачи
@@ -229,17 +230,19 @@ class AutoResearchAgent:
             raise ValueError(f"drop_columns: нельзя удалять целевую '{target}'")
 
         plan_drop = tuple(sorted(plan.get("drop_columns") or []))
+        plan_space = plan.get("model", {}).get("search_space")
 
         for exp in history:
-            exp_params = exp.get("best_params") or exp.get("hyperparameters") or {}
             exp_drop = tuple(sorted(exp.get("drop_columns") or []))
+
             if (
                 exp.get("model") == model
-                and exp_params == params
                 and exp_drop == plan_drop
+                and exp.get("search_space") == plan_space
             ):
                 raise ValueError(
-                    "Эта конфигурация (model + params + drop_columns) уже была в истории"
+                    "Этот search_space (model + search_space + drop_columns) "
+                    "уже запускался"
                 )
 
         return True, "OK"
@@ -342,21 +345,11 @@ class AutoResearchAgent:
             "classification",
             )
 
-            past_configs = set()
-            for exp in history:
-                # Не повторяем что уже было
-                model_str = exp.get("model", "")
-                params_str = str(sorted((exp.get("best_params") or {}).items()))
-                past_configs.add(f"{model_str}_{params_str}")
-
-            def is_duplicate(model_name, params):
-                model_str = model_name
-                params_str = str(sorted(params.items()))
-                return f"{model_str}_{params_str}" in past_configs
+            
 
             successful_exps = [exp for exp in history if exp.get("status") == "success"]
             
-            fallback_dict = None
+            candidates: list[dict] = []
             
             if successful_exps:
                 # Сценарий 1: Есть история. Берем лучший и мутируем.
@@ -373,31 +366,27 @@ class AutoResearchAgent:
 
                 space = self._params_to_search_space(best_model_name, best_params)
                 if space:
-                    fallback_dict = {
+                    candidates.append({
                         "action": "run_optuna",
                         "hypothesis": f"Smart Fallback: optuna around best ({best_model_name})",
                         "model": {"name": best_model_name, "search_space": space},
                         "reasoning": "LLM failed. Narrow Optuna search around best known config.",
                         "estimated_time_sec": 600,
-                    }
+                    })
 
-            if fallback_dict is None:
-                fallbacks = self._get_fallback_configs(is_classification)
+            for cfg in self._get_fallback_configs(is_classification):
+                space = self._params_to_search_space(cfg["name"], cfg["hyperparameters"])
+                if not space:
+                    continue
+                candidates.append ({
+                    "action": "run_optuna",
+                    "hypothesis": f"Safe Fallback: optuna on {cfg['name']}",
+                    "model": {"name": cfg["name"], "search_space": space},
+                    "reasoning": "LLM failed. Optuna search from a robust baseline.",
+                    "estimated_time_sec": 600,
+                })
 
-                for cfg in fallbacks:
-                    space = self._params_to_search_space(cfg["name"], cfg["hyperparameters"])
-                    if not space:
-                        continue
-                    fallback_dict = {
-                        "action": "run_optuna",
-                        "hypothesis": f"Safe Fallback: optuna on {cfg['name']}",
-                        "model": {"name": cfg["name"], "search_space": space},
-                        "reasoning": "LLM failed. Optuna search from a robust baseline.",
-                        "estimated_time_sec": 600,
-                    }
-                    break
-
-                if fallback_dict is None:
+                candidates.append(
                     fallback_dict = {
                         "action": "run_optuna",
                         "hypothesis": "Подобрать глубину и learning rate CatBoost",
@@ -419,10 +408,10 @@ class AutoResearchAgent:
                         },
                         "reasoning": "Попробовать уменьшить RMSE",
                         "estimated_time_sec": 900
-                    }
+                    })
 
 
             try:
-                return OptunaExperimentPlan(**fallback_dict).model_dump()
+                return OptunaExperimentPlan(**candidates).model_dump()
             except Exception as ve:
                 raise RuntimeError(f"Fallback validation failed: {ve}")
