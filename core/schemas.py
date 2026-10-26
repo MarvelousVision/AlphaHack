@@ -1,6 +1,4 @@
-
 from typing import Any, Literal
-from pydantic import BaseModel, Field, ConfigDict
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 PARAM_RANGES = {
@@ -78,6 +76,27 @@ INT_PARAMS = {
     "num_leaves", "min_child_samples",
     "iterations", "depth", "random_seed",
 }
+
+class SearchParam(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["int", "float"]
+    low: float
+    high: float
+    log: bool = False
+
+    @model_validator(mode="after")
+    def check_range(self):
+        if not self.low < self.high:
+            raise ValueError("low must be less than high")
+
+        if self.log and self.low <= 0:
+            raise ValueError("log scale requires low > 0")
+
+        if self.type == "int":
+            if not self.low.is_integer() or not self.high.is_integer():
+                raise ValueError("Integer bounds must be whole numbers")
+        return self
 class ModelConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -127,7 +146,39 @@ class ModelConfig(BaseModel):
                 )
 
         return self
+class SearchConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: ModelConfig.model_fields["name"].annotation
+    search_space: dict[str, SearchParam]
 
+    @model_validator(mode="after")
+    def validate_search_space(self):
+        allowed = PARAM_RANGES.get(self.name, {})
+
+        if not self.search_space:
+            raise ValueError("search_space cannot be empty")
+
+        for key, spec in self.search_space.items():
+            if key not in allowed:
+                raise ValueError(
+                    f"{key} is not allowed for {self.name}"
+                )
+
+            min_allowed, max_allowed = allowed[key]
+            if not (
+                min_allowed <= spec.low < spec.high <= max_allowed
+            ):
+                raise ValueError(
+                    f"{key} outside allowed range"
+                )
+            expected_type = (
+                "int" if key in INT_PARAMS else "float"
+            )
+            if spec.type != expected_type:
+                raise ValueError(
+                    f"{key} must use {expected_type}"
+                )
+        return self
 class PreprocessingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -154,6 +205,15 @@ class ExperimentPlan(BaseModel):
 
     reasoning: str = Field(min_length=1)
     estimated_time_sec: int = Field(gt=0, le=10800)
+class OptunaExperimentPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["run_optuna"]
+    hypothesis: str = Field(min_length=1)
+    model: SearchConfig
+    reasoning: str = Field(min_length=1)
+    estimated_time_sec: int = Field(gt=0, le=10800)
+    drop_columns: list[str] = Field(default_factory=list)
 
 class MetricResult(BaseModel):
     name: str
@@ -161,7 +221,16 @@ class MetricResult(BaseModel):
     direction: Literal["maximize", "minimize"]
 
 
+class TrialResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    score: float = Field(allow_inf_nan=False)
+    params: dict[str, Any]
+
+
 class ExperimentResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     experiment_id: str
     status: Literal["success", "failed"]
     model_name: str
@@ -169,51 +238,9 @@ class ExperimentResult(BaseModel):
     metric: MetricResult | None = None
     cv_std: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     duration_sec: float = Field(ge=0)
+
+    best_params: dict[str, Any] = Field(default_factory=dict)
+    completed_trials: int = Field(default=0, ge=0)
+    top_trials: list[TrialResult] = Field(default_factory=list)
+
     error: str | None = None
-
-
-class EnsemblePlan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    action: Literal["run_ensemble"]
-    hypothesis: str = Field(min_length=1)
-    models: tuple[str, str, str]
-    reasoning: str = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def validate_models(self):
-        valid_models = set(
-            ModelConfig.model_fields["name"].annotation.__args__
-        )
-        if len(set(self.models)) != 3:
-            raise ValueError("Models must be unique")
-        for name in self.models:
-            if name not in valid_models:
-                raise ValueError(f"Unknown model: {name}")
-        return self
-
-    def validate_task(self, task_type: str):
-        regression_models = {
-            "cbr", "lnr", "dtr", "rfr",
-            "svr", "lvr", "lbr", "xbr"
-        }
-        classification_models = {
-            "cbc", "dtc", "rfc", "svc",
-            "lvc", "lbc", "xbc"
-        }
-        if task_type == "regression":
-            allowed = regression_models
-        elif task_type in ("binary", "multiclass"):
-            allowed = classification_models
-        else:
-            raise ValueError(f"Unknown task type: {task_type}")
-        invalid = [
-            name for name in self.models
-            if name not in allowed
-        ]
-        if invalid:
-            raise ValueError(
-                f"Models incompatible with {task_type}: {invalid}"
-            )
-
-        return self

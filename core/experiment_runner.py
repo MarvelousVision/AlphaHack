@@ -5,7 +5,13 @@ import uuid
 
 from pydantic import ValidationError
 
-from core.schemas import ExperimentPlan, ExperimentResult, MetricResult
+from core.schemas import (
+    ExperimentPlan,
+    OptunaExperimentPlan,
+    ExperimentResult,
+    MetricResult,
+    TrialResult,
+)
 
 
 def _direction_for(metric_name: str) -> str:
@@ -32,13 +38,16 @@ class ExperimentRunner:
         if not isinstance(raw, dict):
             return "ML Engine output must be a dictionary"
 
-        required = ("score", "metric_name")
+        required = ("metric_name",)
 
         for key in required:
             if key not in raw:
                 return f"Missing required field: {key}"
 
-        score = raw["score"]
+        if "best_score" not in raw and "score" not in raw:
+            return "Missing score or best_score"
+
+        score = raw.get("best_score", raw.get("score"))
 
         if isinstance(score, bool) or not isinstance(score, (int, float)):
             return "Score must be a number"
@@ -58,12 +67,20 @@ class ExperimentRunner:
 
         return None
 
-    def run(self, plan: dict | ExperimentPlan) -> ExperimentResult:
+    def run(
+    self,
+    plan: dict | ExperimentPlan | OptunaExperimentPlan,
+    ) -> ExperimentResult:
         experiment_id = uuid.uuid4().hex
 
         if isinstance(plan, dict):
             try:
-                plan = ExperimentPlan.model_validate(plan)
+                schema = (
+                    OptunaExperimentPlan
+                    if plan.get("action") == "run_optuna"
+                    else ExperimentPlan
+                )
+                plan = schema.model_validate(plan)
             except ValidationError as e:
                 return ExperimentResult(
                     experiment_id=experiment_id,
@@ -73,7 +90,7 @@ class ExperimentRunner:
                     error=f"Invalid plan: {e}",
                 )
 
-        elif not isinstance(plan, ExperimentPlan):
+        elif not isinstance(plan, (ExperimentPlan, OptunaExperimentPlan)):
             return ExperimentResult(
                 experiment_id=experiment_id,
                 status="failed",
@@ -85,7 +102,12 @@ class ExperimentRunner:
         start = time.perf_counter()
 
         try:
-            raw = self.executor(plan)
+            if isinstance(plan, OptunaExperimentPlan):
+                if time_budget_sec is None or time_budget_sec <= 0:
+                    raise ValueError("Optuna experiment requires a positive time budget")
+                raw = self.executor(plan, time_budget_sec=time_budget_sec)
+            else:
+                raw = self.executor(plan)
 
         except Exception as e:
             return ExperimentResult(
@@ -115,10 +137,16 @@ class ExperimentRunner:
             model_name=plan.model.name,
             metric=MetricResult(
                 name=metric_name,
-                value=float(raw["score"]),
+                value=float(raw.get("best_score", raw.get("score"))),
                 direction=_direction_for(metric_name),
             ),
             cv_std=raw.get("cv_std"),
             duration_sec=time.perf_counter() - start,
+            best_params=raw.get("best_params") or {},
+            completed_trials=raw.get("completed_trials", 0),
+            top_trials=[
+                TrialResult.model_validate(trial)
+                for trial in (raw.get("top_trials") or [])
+            ],
             error=None,
         )

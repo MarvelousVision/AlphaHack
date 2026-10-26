@@ -1,5 +1,8 @@
-
-from core.schemas import ExperimentPlan, ExperimentResult
+from core.schemas import (
+    ExperimentPlan,
+    OptunaExperimentPlan,
+    ExperimentResult,
+)
 import json
 from pathlib import Path
 
@@ -7,10 +10,16 @@ class ExperimentTracker:
     def __init__(self):
         self.history = []
 
-    def add_experiment(self,plan: ExperimentPlan,result: ExperimentResult):
+    def add_experiment(
+    self,
+    plan: ExperimentPlan | OptunaExperimentPlan,
+    result: ExperimentResult,
+    ):
         self.history.append({"plan": plan, "result": result})
-
-    def get_best(self, metric_name: str) -> ExperimentResult | None:
+    def get_best(
+    self,
+    metric_name: str,
+    ) -> ExperimentResult | None:
         candidates = [
             e["result"]
             for e in self.history
@@ -27,7 +36,10 @@ class ExperimentTracker:
         return min(candidates, key=lambda r: r.metric.value)
     
    
-    def get_best_plan(self, metric_name: str) -> ExperimentPlan | None:
+    def get_best_plan(
+    self,
+    metric_name: str,
+    ) -> ExperimentPlan | OptunaExperimentPlan | None:
         best = self.get_best(metric_name)
 
         if best is None:
@@ -55,23 +67,46 @@ class ExperimentTracker:
 
     def get_summary_for_agent(self) -> list[dict]:
         summary = []
-
         for entry in self.history:
             plan = entry["plan"]
             result = entry["result"]
             metric = result.metric
+            search_space = getattr(plan.model, "search_space", None)
             summary.append({
                 "experiment_id": result.experiment_id,
                 "model": plan.model.name,
-                "hyperparameters": plan.model.hyperparameters,
+                "hypothesis": plan.hypothesis,
                 "status": result.status,
+                "search_space": (
+                    {
+                        name: spec.model_dump(mode="json")
+                        for name, spec in search_space.items()
+                    }
+                    if search_space is not None
+                    else None
+                ),
+                "hyperparameters": getattr(
+                    plan.model, "hyperparameters", None
+                ),
+                "metric": (
+                    metric.model_dump(mode="json")
+                    if metric is not None
+                    else None
+                ),
                 "score": metric.value if metric is not None else None,
                 "metric_name": metric.name if metric is not None else None,
-                "error": result.error,
-                "hypothesis": plan.hypothesis,
-                "cv_std": getattr(result, "cv_std", None), 
+                "best_params": result.best_params,
+                "completed_trials": result.completed_trials,
+                "top_trials": [
+                    trial.model_dump(mode="json")
+                    for trial in result.top_trials
+                ],
+                "drop_columns": getattr(plan, "drop_columns", []),
+                "cv_std": result.cv_std,
                 "duration_sec": result.duration_sec,
+                "error": result.error,
             })
+
         return summary
     def get_model_durations(self) -> dict[str, float]:
         durations = {}

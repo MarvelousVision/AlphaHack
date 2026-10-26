@@ -1,9 +1,7 @@
 
 import time
 from pathlib import Path
-
-from core.schemas import ExperimentPlan, EnsemblePlan
-
+from core.schemas import OptunaExperimentPlan
 
 class Orchestrator:
     def __init__(
@@ -36,25 +34,14 @@ class Orchestrator:
         )
         self.history_path = Path(history_path)
 
-    def estimate_duration(self, plan: ExperimentPlan) -> float:
-        max_duration = self.tracker.get_max_model_duration(
-            plan.model.name
-        )
-
-        estimated = float(plan.estimated_time_sec)
-
-        if max_duration is not None:
-            estimated = max(estimated, max_duration * 1.5)
-
-        return estimated
+    def estimate_duration(self, plan: OptunaExperimentPlan) -> float:
+        return float(plan.estimated_time_sec)
 
     def get_final_reserve(self) -> float:
-        durations = [
-            entry["result"].duration_sec
-            for entry in self.tracker.get_history()
-            if entry["result"].status == "success"
-        ]
-
+        return max(
+            self.final_reserve_sec,
+            self.estimated_final_train_sec * 2 + 300,
+        )
         max_duration = max(durations, default=0)
 
         return max(
@@ -104,7 +91,7 @@ class Orchestrator:
                     remaining_time_sec=research_time,
                 )
 
-                plan = ExperimentPlan.model_validate(raw_plan)
+                plan = OptunaExperimentPlan.model_validate(raw_plan)
                 consecutive_agent_errors = 0
 
             except Exception as exc:
@@ -123,7 +110,6 @@ class Orchestrator:
 
             already_tested = any(
                 entry["plan"].model == plan.model
-                and entry["plan"].features == plan.features
                 for entry in self.tracker.get_history()
             )
 
@@ -241,49 +227,4 @@ class Orchestrator:
                 0.0,
                 budget - (time.perf_counter() - start),
             ),
-        }
-    async def propose_ensemble(self, remaining_time_sec: float):
-        raw_plan = await self.agent.propose_ensemble(
-            task_info=self.task_info,
-        )
-        plan = EnsemblePlan.model_validate(raw_plan)
-        plan.validate_task(self.task_info["task_type"])
-        return plan
-    async def run_ensemble(
-        self,
-        raw_plan,
-        choir,
-        task_type: str,
-        time_budget_sec: float | None = None,
-    ):
-        plan = EnsemblePlan.model_validate(raw_plan)
-        plan.validate_task(task_type)
-
-        budget = (
-            self.time_budget_sec
-            if time_budget_sec is None
-            else float(time_budget_sec)
-        )
-
-        usable_budget = budget - 300
-
-        if usable_budget <= 0:
-            raise TimeoutError("Not enough time for ensemble")
-
-        started_at = time.perf_counter()
-
-        predictions = choir(
-            *plan.models,
-            time_left=usable_budget,
-        )
-
-        if predictions is None:
-            raise RuntimeError("choir returned no predictions")
-
-        elapsed = time.perf_counter() - started_at
-        return {
-            "plan": plan,
-            "predictions": predictions,
-            "duration_sec": elapsed,
-            "remaining_time_sec": max(0.0, budget - elapsed),
         }
