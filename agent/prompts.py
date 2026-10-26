@@ -74,28 +74,28 @@ SYSTEM_PROMPT_TEMPLATE = """
 
 ФОРМАТ ОТВЕТА:
 Возвращай строго валидный JSON. Схема:
-{
+{{
     "action": "run_optuna",
     "hypothesis": "Подобрать глубину и learning rate CatBoost",
-    "model": {
+    "model": {{
         "name": "cbr",
-        "search_space": {
-        "depth": {
+        "search_space": {{
+        "depth": {{
             "type": "int",
             "low": 4,
             "high": 9
-        },
-        "learning_rate": {
+        }},
+        "learning_rate": {{
             "type": "float",
             "low": 0.02,
             "high": 0.15,
-            "log": True
-        }
-        }
-    },
+            "log": true
+        }}
+        }}
+    }},
     "reasoning": "Попробовать уменьшить RMSE",
     "estimated_time_sec": 900
-}
+}}
 """
 
 STRATEGY_EXPLORATION = """

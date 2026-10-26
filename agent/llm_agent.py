@@ -1,7 +1,6 @@
 import json
 from openai import AsyncOpenAI
-from core.schemas import ExperimentPlan, EnsemblePlan, PARAM_RANGES, INT_PARAMS
-from solution import task_info
+from core.schemas import OptunaExperimentPlan, EnsemblePlan, PARAM_RANGES, INT_PARAMS
 from agent.prompts import (
     SYSTEM_PROMPT_TEMPLATE,
     STRATEGY_RECOVERY,
@@ -62,6 +61,23 @@ class AutoResearchAgent:
                     
         return clamped
 
+    def _params_to_search_space(self, model_name: str, params: dict) -> dict:
+        space = {}
+        for k, v in params.items():
+            if v is None:
+                continue
+            if k in INT_PARAMS:
+                lo = max(1, int(v) - 2)
+                space[k] = {"type": "int", "low": lo, "high": int(v) + 2}
+            elif isinstance(v, float):
+                space[k] = {
+                    "type": "float",
+                    "low": round(max(v * 0.5, 1e-5), 5),
+                    "high": round(v * 2.0, 5),
+                    "log": k in ("learning_rate", "C", "gamma"),
+                }
+        return space
+
     def _get_available_params_string(self) -> str:
         """Генерирует список разрешенных параметров из PARAM_RANGES."""
         lines = []
@@ -73,7 +89,7 @@ class AutoResearchAgent:
         return "\n".join(lines)
 
     def _detect_situation(self, history: list[dict], best_result: dict | None,
-                      remaining_time_sec: float) -> str:
+                      remaining_time_sec: float, task_info: dict) -> str:
         successful = [h for h in history if h.get("status") == "success"]
         failed = [h for h in history if h.get("status") == "failed"]
 
@@ -168,7 +184,7 @@ class AutoResearchAgent:
                 best_exp = max(successful, key=lambda x: x.get("score") or float("-inf"))
             
             params_str = ", ".join(
-                f"{k}={v}" for k, v in best_exp.get("hyperparameters", {}).items()
+            f"{k}={v}" for k, v in (best_exp.get("best_params") or {}).items()
             )
             lessons.append(
                 f"Лучшая конфигурация: {best_exp['model']}({params_str}) = {best_exp['score']:.4f}. "
@@ -187,7 +203,8 @@ class AutoResearchAgent:
         """Проверяет адекватность плана до запуска."""
 
         model = plan.get("model", {}).get("name", "")
-        params = plan.get("model", {}).get("hyperparameters", {})
+        model_obj = plan.get("model", {})
+        params = model_obj.get("hyperparameters") or model_obj.get("search_space") or {}
         task_type = task_info.get("task_type", "").lower()
 
         # Совместимость модели и задачи
@@ -206,7 +223,8 @@ class AutoResearchAgent:
             return False, f"SVM на {n_rows} строках = OOM"
 
         for exp in history:
-            if exp.get("model") == model and exp.get("hyperparameters") == params:
+            exp_params = exp.get("best_params") or exp.get("hyperparameters") or {}
+            if exp.get("model") == model and exp_params == params:
                 return False, "Эта конфигурация уже была в истории"
 
         return True, "OK"
@@ -225,7 +243,7 @@ class AutoResearchAgent:
         best_str = json.dumps(best_result, indent=2, ensure_ascii=False) if best_result else "Пока нет успешных экспериментов"
         available_params_str = self._get_available_params_string()
 
-        situation = self._detect_situation(history, best_result, remaining_time_sec)
+        situation = self._detect_situation(history, best_result, remaining_time_sec, task_info)
         lessons_text = self._build_lessons(history, task_info.get("metric_name", "rmse"))
         lessons_block = LESSONS_TEMPLATE.format(lessons=lessons_text) if lessons_text else ""
 
@@ -237,7 +255,7 @@ class AutoResearchAgent:
             )
             situation_block = "\n\nПРИОРИТЕТНАЯ СТРАТЕГИЯ (переопределяет базовую):\n" + STRATEGY_RECOVERY.format(errors_summary=errors_summary)
         elif situation == "stagnation":
-            count = self._count_stagnation(history)
+            count = self._count_stagnation(history, task_info.get("metric_name", "rmse"))
             situation_block = "\n\nПРИОРИТЕТНАЯ СТРАТЕГИЯ (переопределяет базовую):\n" + STRATEGY_STAGNATION.format(stagnation_count=count)
         elif situation == "time_pressure":
             situation_block = "\n\nПРИОРИТЕТНАЯ СТРАТЕГИЯ (переопределяет базовую):\n" + STRATEGY_TIME_PRESSURE
@@ -282,7 +300,7 @@ class AutoResearchAgent:
             if not isinstance(raw_json, dict):
                 raise ValueError(f"LLM returned an invalid format (expected dict, got {type(raw_json)}): {raw_json}")
             
-            validated_action = ExperimentPlan(**raw_json)
+            validated_action = OptunaExperimentPlan(**raw_json)
             plan_dict = validated_action.model_dump()
 
             ok, msg = self._validate_plan_sanity(plan_dict, history, task_info)
@@ -325,62 +343,37 @@ class AutoResearchAgent:
                     best_exp = max(successful_exps, key=lambda x: x["score"] if x["score"] is not None else float('-inf'))
                 
                 best_model_name = best_exp["model"]
-                best_params = dict(best_exp["hyperparameters"])
-                
-                # Мутируем параметры
-                for attempt in range(5): #пусть 5, если на хватит, сделаем больше
-                    mutated_params = dict(best_params)
-                    
-                    if "learning_rate" in mutated_params:
-                        mutated_params["learning_rate"] = round(mutated_params["learning_rate"] * (0.8 - attempt * 0.1), 4)
-                    
-                    if "iterations" in mutated_params:
-                        mutated_params["iterations"] = int(mutated_params["iterations"] * (1.5 + attempt * 0.5))
-                    elif "n_estimators" in mutated_params:
-                        mutated_params["n_estimators"] = int(mutated_params["n_estimators"] * (1.5 + attempt * 0.5))
-                    
-                    if "max_depth" in mutated_params and mutated_params["max_depth"] is not None:
-                        mutated_params["max_depth"] = int(mutated_params["max_depth"] * (1.2 + attempt * 0.1))
-                    
-                    if "C" in mutated_params: #Для SVM
-                        mutated_params["C"] = round(mutated_params["C"] * (1.5 + attempt), 2)
+                best_params = dict(
+                    best_exp.get("best_params") or best_exp.get("hyperparameters") or {}
+                )
 
-                    #Если параметров нет вообще добавим дефолтный lr
-                    if not mutated_params and best_model_name not in ["lnr"]:
-                         mutated_params["learning_rate"] = 0.05
-
-                    mutated_params = self._check_bounds(best_model_name, mutated_params)
-
-                    if not is_duplicate(best_model_name, mutated_params):
-                        fallback_dict = {
-                            "action": "run_experiment",
-                            "hypothesis": f"Smart Fallback: tuning best model ({best_model_name})",
-                            "model": {"name": best_model_name, "hyperparameters": mutated_params},
-                            "features": {"strategy": "baseline", "drop_columns": []},
-                            "reasoning": "LLM failed. Mutating best known config to find a unique untested combination.",
-                            "estimated_time_sec": 300
-                        }
-                        break #уникальный конфиг найден, выходим
-                
-                #Если есть совпадения после 5 попытки -> сц. 2
-                if fallback_dict is None:
-                    print("[Agent Warning] Mutation failed to find unique config. Falling back to defaults.")
+                space = self._params_to_search_space(best_model_name, best_params)
+                if space:
+                    fallback_dict = {
+                        "action": "run_optuna",
+                        "hypothesis": f"Smart Fallback: optuna around best ({best_model_name})",
+                        "model": {"name": best_model_name, "search_space": space},
+                        "features": {"strategy": "baseline", "drop_columns": []},
+                        "reasoning": "LLM failed. Narrow Optuna search around best known config.",
+                        "estimated_time_sec": 600,
+                    }
 
             if fallback_dict is None:
-                # Сценарий 2: Истории нет или дубликат, берем заранее подготовленный кофиг выше
                 fallbacks = self._get_fallback_configs(is_classification)
-                
+
                 for cfg in fallbacks:
-                    if not is_duplicate(cfg["name"], cfg["hyperparameters"]):
-                        fallback_dict = {
-                            "action": "run_experiment",
-                            "hypothesis": f"Safe Fallback: exploring {cfg['name']}",
-                            "model": cfg,
-                            "features": {"strategy": "baseline", "drop_columns": []},
-                            "reasoning": "LLM failed. Trying a robust baseline from a predefined list.",
-                            "estimated_time_sec": 300
-                        }
-                        break
+                    space = self._params_to_search_space(cfg["name"], cfg["hyperparameters"])
+                    if not space:
+                        continue
+                    fallback_dict = {
+                        "action": "run_optuna",
+                        "hypothesis": f"Safe Fallback: optuna on {cfg['name']}",
+                        "model": {"name": cfg["name"], "search_space": space},
+                        "features": {"strategy": "baseline", "drop_columns": []},
+                        "reasoning": "LLM failed. Optuna search from a robust baseline.",
+                        "estimated_time_sec": 600,
+                    }
+                    break
 
                 if fallback_dict is None:
                     fallback_dict = {
@@ -408,6 +401,6 @@ class AutoResearchAgent:
 
 
             try:
-                return ExperimentPlan(**fallback_dict).model_dump()
+                return OptunaExperimentPlan(**fallback_dict).model_dump()
             except Exception as ve:
                 raise RuntimeError(f"Fallback validation failed: {ve}")
