@@ -199,19 +199,19 @@ class AutoResearchAgent:
             is_cls = task_type in ("binary", "multiclass", "classification")
             is_reg = task_type == "regression"
             if expected_task == "regression" and not is_reg:
-                return False, f"Модель {model} для регрессии, а задача — {task_type}"
+                raise ValueError(f"Модель {model} для регрессии, а задача — {task_type}")
             if expected_task == "classification" and not is_cls:
-                return False, f"Модель {model} для классификации, а задача — {task_type}"
+                raise ValueError(f"Модель {model} для классификации, а задача — {task_type}")
 
         #SVM на больших данных
         n_rows = task_info.get("n_rows")
         if model in ("svr", "svc") and isinstance(n_rows, int) and n_rows >= 10000:
-            return False, f"SVM на {n_rows} строках = OOM"
+            raise ValueError(f"SVM на {n_rows} строках = OOM")
 
         for exp in history:
             exp_params = exp.get("best_params") or exp.get("hyperparameters") or {}
             if exp.get("model") == model and exp_params == params:
-                return False, "Эта конфигурация уже была в истории"
+                raise ValueError("Эта конфигурация уже была в истории")
 
         return True, "OK"
     
@@ -308,7 +308,7 @@ class AutoResearchAgent:
             for exp in history:
                 # Не повторяем что уже было
                 model_str = exp.get("model", "")
-                params_str = str(sorted(exp.get("best_params", {}).items()))
+                params_str = str(sorted((exp.get("best_params") or {}).items()))
                 past_configs.add(f"{model_str}_{params_str}")
 
             def is_duplicate(model_name, params):
