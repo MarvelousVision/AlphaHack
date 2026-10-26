@@ -1,6 +1,6 @@
 import json
 from openai import AsyncOpenAI
-from core.schemas import OptunaExperimentPlan, EnsemblePlan, PARAM_RANGES, INT_PARAMS
+from core.schemas import OptunaExperimentPlan, PARAM_RANGES, INT_PARAMS
 from agent.prompts import (
     SYSTEM_PROMPT_TEMPLATE,
     STRATEGY_RECOVERY,
@@ -108,39 +108,25 @@ class AutoResearchAgent:
         return "exploitation"
 
     def _count_stagnation(self, history: list[dict], metric_name: str) -> int:
-
-        successful = [h for h in history if h.get("status") == "success"]
+        successful = [
+            h for h in history
+            if h.get("status") == "success" and h.get("score") is not None
+        ]
         if len(successful) < 2:
             return 0
-        
-        scores = [h.get("score") for h in successful if h.get("score") is not None]
-        if not scores:
-            return 0
-        
+
         is_lower_better = metric_name in ("rmse", "mae", "mse")
-        if is_lower_better:
-            best_score = min(scores)
-        else:
-            best_score = max(scores)
 
-        count = 0
-        for exp in reversed(successful):
-            score = exp.get("score")
-            if score is None:
-                continue
+        best_so_far = None
+        best_idx = 0
+        for i, exp in enumerate(successful):
+            s = exp["score"]
+            if best_so_far is None:
+                best_so_far, best_idx = s, i
+            elif (s < best_so_far) if is_lower_better else (s > best_so_far):
+                best_so_far, best_idx = s, i
 
-            improved = (
-                score < best_score if is_lower_better 
-                else score > best_score
-            )
-            
-            if improved:
-
-                break
-            else:
-                count += 1
-        
-        return count
+        return len(successful) - 1 - best_idx
 
     def _build_lessons(self, history: list[dict], metric_name: str) -> str:
         """Извлекает уроки из истории экспериментов."""
@@ -322,7 +308,7 @@ class AutoResearchAgent:
             for exp in history:
                 # Не повторяем что уже было
                 model_str = exp.get("model", "")
-                params_str = str(sorted(exp.get("hyperparameters", {}).items()))
+                params_str = str(sorted(exp.get("best_params", {}).items()))
                 past_configs.add(f"{model_str}_{params_str}")
 
             def is_duplicate(model_name, params):
@@ -353,7 +339,6 @@ class AutoResearchAgent:
                         "action": "run_optuna",
                         "hypothesis": f"Smart Fallback: optuna around best ({best_model_name})",
                         "model": {"name": best_model_name, "search_space": space},
-                        "features": {"strategy": "baseline", "drop_columns": []},
                         "reasoning": "LLM failed. Narrow Optuna search around best known config.",
                         "estimated_time_sec": 600,
                     }
@@ -369,7 +354,6 @@ class AutoResearchAgent:
                         "action": "run_optuna",
                         "hypothesis": f"Safe Fallback: optuna on {cfg['name']}",
                         "model": {"name": cfg["name"], "search_space": space},
-                        "features": {"strategy": "baseline", "drop_columns": []},
                         "reasoning": "LLM failed. Optuna search from a robust baseline.",
                         "estimated_time_sec": 600,
                     }
