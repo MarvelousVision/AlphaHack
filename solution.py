@@ -383,6 +383,7 @@ async def run_solution(task_dir, output_path):
         "task_type": task,
         "metric_name": metric_name,
         "n_rows": len(train_df),
+        "feature_names": train_df.columns.tolist(),
         "description": (
             description_path.read_text(encoding="utf-8")
             if description_path.exists()
